@@ -1,7 +1,5 @@
 # Phoenyra BESS Trade System
 
-![Phoenyra Logo](logo/Phoenyra_Logos/Phoenyra_Abstract.png)
-
 ## 🚀 Übersicht
 
 Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading und die Optimierung von Battery Energy Storage Systems (BESS). Das System kombiniert eine FastAPI-basierte Backend-Architektur mit einer Flask-basierten Web-Oberfläche, die mit Tailwind CSS und Magic UI Komponenten gestaltet wurde.
