@@ -1,0 +1,596 @@
+{% extends "base.html" %}
+
+{% block title %}Phoenyra BESS Trade Dashboard{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0 relative z-10">
+    <!-- Hero Section with Aurora Text -->
+    <div class="text-center mb-8">
+        <h1 class="aurora-text text-4xl md:text-6xl font-bold mb-4">
+            BESS Trading Dashboard
+        </h1>
+        <p class="text-gray-300 text-lg">
+            Real-time Battery Energy Storage System Optimization & Trading
+        </p>
+    </div>
+
+    <!-- Status Cards with Magic UI Effects -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- BESS Status -->
+        <div class="dark-card p-6" id="bess-status">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-battery-half text-2xl text-green-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">BESS SoC</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="soc-percent">--%</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Power -->
+        <div class="dark-card p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-bolt text-2xl text-yellow-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">Aktive Leistung</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="active-power">-- MW</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="dark-card p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-thermometer-half text-2xl text-blue-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">Temperatur</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="temperature">--°C</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Exposure -->
+        <div class="dark-card p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-euro-sign text-2xl text-purple-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">Exposure</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="total-exposure">-- €</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section with Magic UI -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Price Chart -->
+        <div class="dark-card p-6" id="trading">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-chart-line mr-2 text-blue-400"></i>Marktpreise
+            </h3>
+            <canvas id="priceChart" width="400" height="200" class="bg-transparent"></canvas>
+        </div>
+
+        <!-- VWAP Chart -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-chart-bar mr-2 text-green-400"></i>VWAP (15min)
+            </h3>
+            <canvas id="vwapChart" width="400" height="200" class="bg-transparent"></canvas>
+        </div>
+    </div>
+
+    <!-- Trading Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Order Form -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-plus-circle mr-2 text-purple-400"></i>Neue Order
+            </h3>
+            <form id="orderForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Markt</label>
+                    <select id="market" class="mt-1 block w-full bg-gray-800 border-gray-600 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500">
+                        <option value="EPEX_AT_INTRADAY_15MIN">EPEX AT Intraday 15min</option>
+                        <option value="EPEX_DE_INTRADAY_15MIN">EPEX DE Intraday 15min</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Seite</label>
+                    <select id="side" class="mt-1 block w-full bg-gray-800 border-gray-600 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500">
+                        <option value="BUY">Kaufen</option>
+                        <option value="SELL">Verkaufen</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Menge (MWh)</label>
+                    <input type="number" id="quantity" step="0.1" min="0.1" class="mt-1 block w-full bg-gray-800 border-gray-600 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="1.0">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Limit-Preis (€/MWh)</label>
+                    <input type="number" id="limitPrice" step="0.01" min="0" class="mt-1 block w-full bg-gray-800 border-gray-600 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500" placeholder="50.00">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Lieferung Start</label>
+                    <input type="datetime-local" id="deliveryStart" class="mt-1 block w-full bg-gray-800 border-gray-600 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300">Lieferung Ende</label>
+                    <input type="datetime-local" id="deliveryEnd" class="mt-1 block w-full bg-gray-800 border-gray-600 text-white rounded-md shadow-sm focus:ring-purple-500 focus:border-purple-500">
+                </div>
+                <button type="submit" class="shimmer-button w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium">
+                    <i class="fas fa-paper-plane mr-2"></i>Order erstellen
+                </button>
+            </form>
+        </div>
+
+        <!-- Active Orders -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-list mr-2 text-blue-400"></i>Aktive Orders
+            </h3>
+            <div id="activeOrders" class="space-y-2">
+                <div class="text-center text-gray-400 py-4">
+                    <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                    <p>Keine aktiven Orders</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Trades -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-exchange-alt mr-2 text-green-400"></i>Letzte Trades
+            </h3>
+            <div id="recentTrades" class="space-y-2">
+                <div class="text-center text-gray-400 py-4">
+                    <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                    <p>Keine Trades verfügbar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Telemetry Control -->
+    <div class="mt-8 dark-card p-6">
+        <h3 class="text-lg leading-6 font-medium text-white mb-4">
+            <i class="fas fa-cogs mr-2 text-purple-400"></i>BESS Telemetrie-Steuerung
+        </h3>
+        <form id="telemetryForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300">SoC (%)</label>
+                <input type="number" id="telemetrySoc" step="0.1" min="0" max="100" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="72.5">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300">Aktive Leistung (MW)</label>
+                <input type="number" id="telemetryPower" step="0.1" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="3.8">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300">Temperatur (°C)</label>
+                <input type="number" id="telemetryTemp" step="0.1" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="28.3">
+            </div>
+            <div class="md:col-span-3">
+                <button type="submit" class="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <i class="fas fa-upload mr-2"></i>Telemetrie senden
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Dashboard Data Management
+    class DashboardData {
+        constructor() {
+            this.updateInterval = 5000; // 5 seconds
+            this.init();
+        }
+
+        async init() {
+            await this.loadInitialData();
+            this.startAutoUpdate();
+        }
+
+        async loadInitialData() {
+            try {
+                // Load BESS status
+                const bessResponse = await fetch('/api/bess-status');
+                const bessData = await bessResponse.json();
+                this.updateBessStatus(bessData);
+
+                // Load market data
+                const marketResponse = await fetch('/api/market-data');
+                const marketData = await marketResponse.json();
+                this.updateMarketData(marketData);
+
+                // Load orders
+                const ordersResponse = await fetch('/api/orders');
+                const ordersData = await ordersResponse.json();
+                this.updateOrders(ordersData);
+
+                // Load trades
+                const tradesResponse = await fetch('/api/trades');
+                const tradesData = await tradesResponse.json();
+                this.updateTrades(tradesData);
+
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+            }
+        }
+
+        updateBessStatus(data) {
+            document.getElementById('soc-percent').textContent = `${data.soc_percent}%`;
+            document.getElementById('active-power').textContent = `${data.active_power} MW`;
+            document.getElementById('temperature').textContent = `${data.temperature}°C`;
+            
+            // Update connection status
+            const statusElement = document.getElementById('connection-status');
+            if (data.status === 'online') {
+                statusElement.innerHTML = '<span class="status-indicator status-online"></span>Verbunden';
+            } else {
+                statusElement.innerHTML = '<span class="status-indicator status-offline"></span>Offline';
+            }
+        }
+
+        updateMarketData(data) {
+            // Update charts with new data
+            this.updatePriceChart(data);
+            this.updateVwapChart(data);
+        }
+
+        updatePriceChart(data) {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            if (this.priceChart) {
+                this.priceChart.destroy();
+            }
+            
+            this.priceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mark', 'EMA', 'VWAP'],
+                    datasets: [{
+                        label: 'Preise (€/MWh)',
+                        data: [data.mark, data.ema, data.vwap],
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        updateVwapChart(data) {
+            const ctx = document.getElementById('vwapChart').getContext('2d');
+            if (this.vwapChart) {
+                this.vwapChart.destroy();
+            }
+            
+            // Generate some mock VWAP data over time
+            const labels = [];
+            const vwapData = [];
+            const now = new Date();
+            
+            for (let i = 14; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 60000); // 1 minute intervals
+                labels.push(time.toLocaleTimeString('de-DE', {hour: '2-digit', minute: '2-digit'}));
+                vwapData.push(data.vwap + (Math.random() - 0.5) * 2); // Add some variation
+            }
+            
+            this.vwapChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'VWAP (€/MWh)',
+                        data: vwapData,
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#ffffff'
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        updateOrders(ordersData) {
+            const ordersContainer = document.getElementById('activeOrders');
+            if (ordersData.orders && ordersData.orders.length > 0) {
+                ordersContainer.innerHTML = ordersData.orders.map(order => `
+                    <div class="bg-gray-700 p-3 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-white font-medium">${order.side} ${order.quantity} MWh</span>
+                            <span class="text-gray-300">${order.price} €/MWh</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">${order.status}</div>
+                    </div>
+                `).join('');
+            } else {
+                ordersContainer.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                        <p>Keine aktiven Orders</p>
+                    </div>
+                `;
+            }
+        }
+
+        updateTrades(tradesData) {
+            const tradesContainer = document.getElementById('recentTrades');
+            if (tradesData.trades && tradesData.trades.length > 0) {
+                tradesContainer.innerHTML = tradesData.trades.map(trade => `
+                    <div class="bg-gray-700 p-3 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-white font-medium">${trade.side} ${trade.quantity} MWh</span>
+                            <span class="text-gray-300">${trade.price} €/MWh</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">${new Date(trade.timestamp).toLocaleTimeString('de-DE')}</div>
+                    </div>
+                `).join('');
+            } else {
+                tradesContainer.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                        <p>Keine Trades verfügbar</p>
+                    </div>
+                `;
+            }
+        }
+
+        startAutoUpdate() {
+            setInterval(async () => {
+                try {
+                    const bessResponse = await fetch('/api/bess-status');
+                    const bessData = await bessResponse.json();
+                    this.updateBessStatus(bessData);
+
+                    const marketResponse = await fetch('/api/market-data');
+                    const marketData = await marketResponse.json();
+                    this.updateMarketData(marketData);
+                } catch (error) {
+                    console.error('Error updating data:', error);
+                }
+            }, this.updateInterval);
+        }
+    }
+
+    // Initialize dashboard when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        new DashboardData();
+    });
+</script>
+{% endblock %}
+
+    const priceChart = new Chart(priceCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Mark Preis',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }, {
+                label: 'EMA',
+                data: [],
+                borderColor: 'rgb(255, 99, 132)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+
+    const vwapChart = new Chart(vwapCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'VWAP',
+                data: [],
+                borderColor: 'rgb(54, 162, 235)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+
+    // Order form submission
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const orderData = {
+            market: document.getElementById('market').value,
+            side: document.getElementById('side').value,
+            quantity_mwh: parseFloat(document.getElementById('quantity').value),
+            limit_price_eur_mwh: parseFloat(document.getElementById('limitPrice').value),
+            delivery_start: document.getElementById('deliveryStart').value,
+            delivery_end: document.getElementById('deliveryEnd').value,
+            order_type: 'LIMIT',
+            time_in_force: 'GFD'
+        };
+
+        try {
+            const response = await fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.order_id) {
+                alert('Order erfolgreich erstellt: ' + result.order_id);
+                document.getElementById('orderForm').reset();
+            } else {
+                alert('Fehler beim Erstellen der Order: ' + (result.error || 'Unbekannter Fehler'));
+            }
+        } catch (error) {
+            alert('Fehler beim Erstellen der Order: ' + error.message);
+        }
+    });
+
+    // Telemetry form submission
+    document.getElementById('telemetryForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const telemetryData = {
+            soc_percent: parseFloat(document.getElementById('telemetrySoc').value),
+            active_power_mw: parseFloat(document.getElementById('telemetryPower').value),
+            temperature_c: parseFloat(document.getElementById('telemetryTemp').value)
+        };
+
+        try {
+            const response = await fetch('/api/telemetry', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(telemetryData)
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'OK') {
+                alert('Telemetrie erfolgreich gesendet');
+                updateDashboard();
+            } else {
+                alert('Fehler beim Senden der Telemetrie: ' + (result.error || 'Unbekannter Fehler'));
+            }
+        } catch (error) {
+            alert('Fehler beim Senden der Telemetrie: ' + error.message);
+        }
+    });
+
+    // Update dashboard data
+    async function updateDashboard() {
+        try {
+            // Fetch metrics
+            const response = await fetch('/api/metrics');
+            const metricsText = await response.text();
+            
+            // Parse Prometheus metrics (simplified)
+            const lines = metricsText.split('\n');
+            lines.forEach(line => {
+                if (line.startsWith('pho_soc_percent ')) {
+                    const value = parseFloat(line.split(' ')[1]);
+                    document.getElementById('soc-percent').textContent = value.toFixed(1) + '%';
+                } else if (line.startsWith('pho_bess_power_mw ')) {
+                    const value = parseFloat(line.split(' ')[1]);
+                    document.getElementById('active-power').textContent = value.toFixed(1) + ' MW';
+                } else if (line.startsWith('pho_temp_celsius ')) {
+                    const value = parseFloat(line.split(' ')[1]);
+                    document.getElementById('temperature').textContent = value.toFixed(1) + '°C';
+                }
+            });
+        } catch (error) {
+            console.error('Error updating dashboard:', error);
+        }
+    }
+
+    // Initialize dashboard
+    updateDashboard();
+    setInterval(updateDashboard, 5000); // Update every 5 seconds
+
+    // Set default delivery times
+    const now = new Date();
+    const start = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
+    const end = new Date(now.getTime() + 2 * 60 * 60 * 1000); // 2 hours from now
+    
+    document.getElementById('deliveryStart').value = start.toISOString().slice(0, 16);
+    document.getElementById('deliveryEnd').value = end.toISOString().slice(0, 16);
+</script>
+{% endblock %}

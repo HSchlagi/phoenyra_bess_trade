@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Phoenyra BESS Trade Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Magic UI Styles */
+        .gradient-bg {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+            position: relative;
+        }
+        
+        .gradient-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 215, 0, 0.1) 0%, 
+                transparent 50%, 
+                rgba(255, 215, 0, 0.05) 100%);
+            pointer-events: none;
+        }
+        
+        /* Dark Mode Cards with Gold Standard */
+        .dark-card {
+            position: relative;
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(45, 55, 72, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .dark-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 215, 0, 0.05) 0%, 
+                transparent 50%, 
+                rgba(255, 215, 0, 0.03) 100%);
+            pointer-events: none;
+        }
+        
+        .dark-card:hover {
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 
+                0 10px 25px rgba(0, 0, 0, 0.3),
+                0 0 20px rgba(255, 215, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        /* Light Mode Cards */
+        .light-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .light-card:hover {
+            border-color: rgba(156, 163, 175, 0.8);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Magic Card Hover Effect */
+        .magic-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .magic-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Shimmer Button Effect */
+        .shimmer-button {
+            position: relative;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .shimmer-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .shimmer-button:hover::before {
+            left: 100%;
+        }
+        
+        /* Animated Text Effects */
+        .aurora-text {
+            background: linear-gradient(45deg, #ff00aa, #7928CA, #0070F3, #38bdf8);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: aurora 4s ease-in-out infinite;
+        }
+        
+        @keyframes aurora {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        /* Number Ticker Animation */
+        .number-ticker {
+            font-variant-numeric: tabular-nums;
+            transition: all 0.3s ease;
+        }
+        
+        /* Particle Background */
+        .particle-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0; }
+            10%, 90% { opacity: 1; }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        /* Status Indicators */
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-online { 
+            background-color: #10b981; 
+            box-shadow: 0 0 10px #10b981;
+        }
+        
+        .status-offline { 
+            background-color: #ef4444; 
+            box-shadow: 0 0 10px #ef4444;
+        }
+        
+        .status-warning { 
+            background-color: #f59e0b; 
+            box-shadow: 0 0 10px #f59e0b;
+        }
+        
+        /* Glowing Effects */
+        .glow {
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+        }
+        
+        .glow-green {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+        
+        .glow-red {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+        }
+        
+        /* Custom Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Gold Standard Background */
+        .gold-bg {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            position: relative;
+        }
+        
+        .gold-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 215, 0, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(255, 215, 0, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        
+        /* Gold Footer */
+        .gold-footer {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            border-top: 1px solid rgba(255, 215, 0, 0.3);
+            position: relative;
+        }
+        
+        .gold-footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, 
+                rgba(255, 215, 0, 0.08) 0%, 
+                transparent 50%, 
+                rgba(255, 215, 0, 0.05) 100%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 min-h-screen gold-bg">
+
+    <!-- Navigation -->
+    <nav class="gradient-bg shadow-lg relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <h1 class="aurora-text text-xl font-bold flex items-center">
+                            <img src="/static/phoenyra_logo.png" alt="Phoenyra Logo" class="h-16 w-auto mr-3 object-contain">
+                            Phoenyra BESS Trade
+                        </h1>
+                    </div>
+                    <div class="hidden md:block">
+                        <div class="ml-10 flex items-baseline space-x-4">
+                            <a href="/" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
+                                <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
+                            </a>
+                            <a href="/#trading" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
+                                <i class="fas fa-chart-line mr-1"></i>Trading
+                            </a>
+                            <a href="/#bess-status" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
+                                <i class="fas fa-battery-half mr-1"></i>BESS Status
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <div class="flex items-center space-x-4">
+                        <!-- Theme Toggle -->
+                        <button id="theme-toggle" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
+                            <i class="fas fa-moon" id="theme-icon"></i>
+                        </button>
+                        <span class="text-white text-sm" id="connection-status">
+                            <span class="status-indicator status-offline"></span>
+                            Verbindung wird hergestellt...
+                        </span>
+                        <span class="text-white text-sm" id="current-time"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="gold-footer mt-auto relative">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-300">
+                    Phoenyra BESS Trade System v2.0
+                </div>
+                <div class="text-sm text-gray-300">
+                    © 2025 Phoenyra.com by Ing. Heinz Schlagintweit. Alle Rechte vorbehalten.
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Socket.IO Script -->
+    <script>
+        const socket = io();
+        
+        socket.on('connect', function() {
+            document.getElementById('connection-status').innerHTML = 
+                '<span class="status-indicator status-online"></span>Verbunden';
+        });
+        
+        socket.on('disconnect', function() {
+            document.getElementById('connection-status').innerHTML = 
+                '<span class="status-indicator status-offline"></span>Verbindung getrennt';
+        });
+        
+        socket.on('order_update', function(data) {
+            console.log('Order Update:', data);
+            // Handle order updates here
+        });
+        
+        // Update time every second
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleTimeString('de-DE');
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const body = document.body;
+        
+        // Check for saved theme preference or default to 'dark'
+        const currentTheme = localStorage.getItem('theme') || 'dark';
+        body.setAttribute('data-theme', currentTheme);
+        
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            
+            // Update icon
+            if (newTheme === 'dark') {
+                themeIcon.className = 'fas fa-moon';
+            } else {
+                themeIcon.className = 'fas fa-sun';
+            }
+            
+            // Update card classes
+            updateCardClasses(newTheme);
+        });
+        
+        function updateCardClasses(theme) {
+            const cards = document.querySelectorAll('.dark-card, .light-card');
+            cards.forEach(card => {
+                card.className = card.className.replace(/dark-card|light-card/g, theme + '-card');
+            });
+        }
+        
+        // Initialize theme on page load
+        if (body.getAttribute('data-theme') === 'light') {
+            themeIcon.className = 'fas fa-sun';
+            updateCardClasses('light');
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

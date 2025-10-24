@@ -1,0 +1,543 @@
+{% extends "base.html" %}
+
+{% block title %}Phoenyra BESS Trade Dashboard{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0 relative z-10">
+    <!-- Hero Section with Aurora Text -->
+    <div class="text-center mb-8">
+        <h1 class="aurora-text text-4xl md:text-6xl font-bold mb-4">
+            BESS Trading Dashboard
+        </h1>
+        <p class="text-gray-300 text-lg">
+            Real-time Battery Energy Storage System Optimization & Trading
+        </p>
+    </div>
+
+    <!-- Status Cards with Magic UI Effects -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- BESS Status -->
+        <div class="dark-card p-6" id="bess-status">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-battery-half text-2xl text-green-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">BESS SoC</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="soc-percent">--%</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Power -->
+        <div class="dark-card p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-bolt text-2xl text-yellow-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">Aktive Leistung</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="active-power">-- MW</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="dark-card p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-thermometer-half text-2xl text-blue-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">Temperatur</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="temperature">--°C</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Exposure -->
+        <div class="dark-card p-6">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-euro-sign text-2xl text-purple-400"></i>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                    <dl>
+                        <dt class="text-sm font-medium text-gray-300 truncate">Exposure</dt>
+                        <dd class="text-lg font-medium text-white number-ticker" id="total-exposure">-- €</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section with Magic UI -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Price Chart -->
+        <div class="dark-card p-6" id="trading">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-chart-line mr-2 text-blue-400"></i>Marktpreise
+            </h3>
+            <div id="priceChart" class="h-64"></div>
+        </div>
+
+        <!-- VWAP Chart -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-chart-bar mr-2 text-green-400"></i>VWAP (15min)
+            </h3>
+            <div id="vwapChart" class="h-64"></div>
+        </div>
+    </div>
+
+    <!-- Trading Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Order Form -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-plus-circle mr-2 text-purple-400"></i>Neue Order
+            </h3>
+            <form id="orderForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Seite</label>
+                    <select name="side" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="buy">Kaufen</option>
+                        <option value="sell">Verkaufen</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Menge (MWh)</label>
+                    <input type="number" name="quantity" step="0.1" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="1.0">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Preis (€/MWh)</label>
+                    <input type="number" name="price" step="0.01" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="85.50">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Markt</label>
+                    <select name="market" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="spot">Spot</option>
+                        <option value="intraday">Intraday</option>
+                    </select>
+                </div>
+                <button type="submit" class="shimmer-button w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium">
+                    <i class="fas fa-paper-plane mr-2"></i>Order erstellen
+                </button>
+            </form>
+        </div>
+
+        <!-- Active Orders -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-list mr-2 text-blue-400"></i>Aktive Orders
+            </h3>
+            <div id="activeOrders" class="space-y-2">
+                <div class="text-center text-gray-400 py-4">
+                    <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                    <p>Keine aktiven Orders</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Trades -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-exchange-alt mr-2 text-green-400"></i>Letzte Trades
+            </h3>
+            <div id="recentTrades" class="space-y-2">
+                <div class="text-center text-gray-400 py-4">
+                    <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                    <p>Keine Trades verfügbar</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Telemetry Control -->
+    <div class="mt-8 dark-card p-6">
+        <h3 class="text-lg leading-6 font-medium text-white mb-4">
+            <i class="fas fa-cogs mr-2 text-purple-400"></i>BESS Telemetrie-Steuerung
+        </h3>
+        <form id="telemetryForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300">SoC (%)</label>
+                <input type="number" name="soc_percent" step="0.1" min="0" max="100" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="72.5">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300">Aktive Leistung (MW)</label>
+                <input type="number" name="active_power" step="0.1" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="3.8">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300">Temperatur (°C)</label>
+                <input type="number" name="temperature" step="0.1" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="28.3">
+            </div>
+            <div class="md:col-span-3">
+                <button type="submit" class="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                    <i class="fas fa-upload mr-2"></i>Telemetrie senden
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Dashboard Data Management
+    class DashboardData {
+        constructor() {
+            this.updateInterval = 10000; // 10 seconds
+            this.init();
+        }
+
+        async init() {
+            this.initializeCharts();
+            await this.loadInitialData();
+            this.startAutoUpdate();
+            this.setupEventListeners();
+        }
+
+        async loadInitialData() {
+            try {
+                // Load BESS status
+                const bessResponse = await fetch('/api/bess-status');
+                const bessData = await bessResponse.json();
+                this.updateBessStatus(bessData);
+
+                // Load market data
+                const marketResponse = await fetch('/api/market-data');
+                const marketData = await marketResponse.json();
+                this.updateMarketData(marketData);
+
+                // Load orders
+                const ordersResponse = await fetch('/api/orders');
+                const ordersData = await ordersResponse.json();
+                this.updateOrders(ordersData);
+
+                // Load trades
+                const tradesResponse = await fetch('/api/trades');
+                const tradesData = await tradesResponse.json();
+                this.updateTrades(tradesData);
+
+            } catch (error) {
+                console.error('Error loading initial data:', error);
+            }
+        }
+
+        updateBessStatus(data) {
+            document.getElementById('soc-percent').textContent = `${data.soc_percent}%`;
+            document.getElementById('active-power').textContent = `${data.active_power} MW`;
+            document.getElementById('temperature').textContent = `${data.temperature}°C`;
+            
+            // Update connection status
+            const statusElement = document.getElementById('connection-status');
+            if (data.status === 'online') {
+                statusElement.innerHTML = '<span class="status-indicator status-online"></span>Verbunden';
+            } else {
+                statusElement.innerHTML = '<span class="status-indicator status-offline"></span>Offline';
+            }
+        }
+
+        updateMarketData(data) {
+            // Update charts with new data
+            if (this.priceChart) {
+                this.priceChart.updateSeries([{
+                    data: [data.mark, data.ema, data.vwap]
+                }]);
+            }
+            
+            if (this.vwapChart) {
+                // Generate time series data
+                const seriesData = [];
+                const now = new Date();
+                
+                for (let i = 14; i >= 0; i--) {
+                    const time = new Date(now.getTime() - i * 60000);
+                    seriesData.push({
+                        x: time.getTime(),
+                        y: data.vwap + (Math.random() - 0.5) * 2
+                    });
+                }
+                
+                this.vwapChart.updateSeries([{
+                    data: seriesData
+                }]);
+            }
+        }
+
+        initializeCharts() {
+            // Initialize Price Chart with ApexCharts
+            const priceOptions = {
+                series: [{
+                    name: 'Preise (€/MWh)',
+                    data: [85.50, 84.20, 85.10]
+                }],
+                chart: {
+                    type: 'line',
+                    height: 250,
+                    background: 'transparent',
+                    toolbar: {
+                        show: false
+                    }
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 3,
+                    colors: ['#00FF00']
+                },
+                colors: ['#00FF00'],
+                markers: {
+                    size: 0
+                },
+                fill: {
+                    type: 'solid',
+                    colors: ['#00FF00'],
+                    opacity: 0.1
+                },
+                xaxis: {
+                    categories: ['Mark', 'EMA', 'VWAP'],
+                    labels: {
+                        style: {
+                            colors: '#ffffff'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            colors: '#ffffff'
+                        }
+                    }
+                },
+                grid: {
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                },
+                tooltip: {
+                    theme: 'dark'
+                },
+                legend: {
+                    labels: {
+                        colors: '#ffffff'
+                    }
+                }
+            };
+
+            this.priceChart = new ApexCharts(document.querySelector("#priceChart"), priceOptions);
+            this.priceChart.render();
+
+            // Initialize VWAP Chart with ApexCharts
+            const vwapData = [];
+            const now = new Date();
+            
+            for (let i = 14; i >= 0; i--) {
+                const time = new Date(now.getTime() - i * 60000);
+                vwapData.push({
+                    x: time.getTime(),
+                    y: 85.10 + (Math.random() - 0.5) * 2
+                });
+            }
+
+            const vwapOptions = {
+                series: [{
+                    name: 'VWAP (€/MWh)',
+                    data: vwapData
+                }],
+                chart: {
+                    type: 'line',
+                    height: 250,
+                    background: 'transparent',
+                    toolbar: {
+                        show: false
+                    }
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 3,
+                    colors: ['#00FF00']
+                },
+                colors: ['#00FF00'],
+                markers: {
+                    size: 0
+                },
+                fill: {
+                    type: 'solid',
+                    colors: ['#00FF00'],
+                    opacity: 0.1
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        style: {
+                            colors: '#ffffff'
+                        }
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        style: {
+                            colors: '#ffffff'
+                        },
+                        formatter: function(value) {
+                            return value.toFixed(2);
+                        }
+                    }
+                },
+                grid: {
+                    borderColor: 'rgba(255, 255, 255, 0.1)'
+                },
+                tooltip: {
+                    theme: 'dark',
+                    x: {
+                        format: 'HH:mm'
+                    },
+                    y: {
+                        formatter: function(value) {
+                            return value.toFixed(2) + ' €/MWh';
+                        }
+                    }
+                },
+                legend: {
+                    labels: {
+                        colors: '#ffffff'
+                    }
+                }
+            };
+
+            this.vwapChart = new ApexCharts(document.querySelector("#vwapChart"), vwapOptions);
+            this.vwapChart.render();
+        }
+
+        updateOrders(ordersData) {
+            const ordersContainer = document.getElementById('activeOrders');
+            if (ordersData.orders && ordersData.orders.length > 0) {
+                ordersContainer.innerHTML = ordersData.orders.map(order => `
+                    <div class="bg-gray-700 p-3 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-white font-medium">${order.side} ${order.quantity} MWh</span>
+                            <span class="text-gray-300">${order.price} €/MWh</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">${order.status}</div>
+                    </div>
+                `).join('');
+            } else {
+                ordersContainer.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                        <p>Keine aktiven Orders</p>
+                    </div>
+                `;
+            }
+        }
+
+        updateTrades(tradesData) {
+            const tradesContainer = document.getElementById('recentTrades');
+            if (tradesData.trades && tradesData.trades.length > 0) {
+                tradesContainer.innerHTML = tradesData.trades.map(trade => `
+                    <div class="bg-gray-700 p-3 rounded-lg">
+                        <div class="flex justify-between items-center">
+                            <span class="text-white font-medium">${trade.side} ${trade.quantity} MWh</span>
+                            <span class="text-gray-300">${trade.price} €/MWh</span>
+                        </div>
+                        <div class="text-xs text-gray-400 mt-1">${new Date(trade.timestamp).toLocaleTimeString('de-DE')}</div>
+                    </div>
+                `).join('');
+            } else {
+                tradesContainer.innerHTML = `
+                    <div class="text-center text-gray-400 py-4">
+                        <i class="fas fa-check-circle text-2xl mb-2 text-green-400"></i>
+                        <p>Keine Trades verfügbar</p>
+                    </div>
+                `;
+            }
+        }
+
+        setupEventListeners() {
+            // Order Form Handler
+            document.getElementById('orderForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const orderData = {
+                    side: formData.get('side'),
+                    quantity: parseFloat(formData.get('quantity')),
+                    price: parseFloat(formData.get('price')),
+                    market: formData.get('market')
+                };
+                
+                // Send order to backend
+                fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(orderData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Order created:', data);
+                    e.target.reset();
+                })
+                .catch(error => {
+                    console.error('Error creating order:', error);
+                });
+            });
+
+            // Telemetry Form Handler
+            document.getElementById('telemetryForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const telemetryData = {
+                    soc_percent: parseFloat(formData.get('soc_percent')),
+                    active_power: parseFloat(formData.get('active_power')),
+                    temperature: parseFloat(formData.get('temperature'))
+                };
+                
+                // Send telemetry to backend
+                fetch('/api/telemetry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(telemetryData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Telemetry sent:', data);
+                    e.target.reset();
+                })
+                .catch(error => {
+                    console.error('Error sending telemetry:', error);
+                });
+            });
+        }
+
+        startAutoUpdate() {
+            setInterval(async () => {
+                try {
+                    const bessResponse = await fetch('/api/bess-status');
+                    const bessData = await bessResponse.json();
+                    this.updateBessStatus(bessData);
+
+                    const marketResponse = await fetch('/api/market-data');
+                    const marketData = await marketResponse.json();
+                    this.updateMarketData(marketData);
+                } catch (error) {
+                    console.error('Error updating data:', error);
+                }
+            }, this.updateInterval);
+        }
+    }
+
+    // Initialize dashboard when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        new DashboardData();
+    });
+</script>
+{% endblock %}

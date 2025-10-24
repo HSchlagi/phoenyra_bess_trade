@@ -1,0 +1,27 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: phoenyra-alerts
+    folder: Phoenyra
+    interval: 10s
+    rules:
+      - uid: soc-low
+        title: BESS SoC low
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: {from: 300, to: 0}
+            model: {expr: "pho_soc_percent < 15"}
+        for: 2m
+        annotations: {summary: "SoC below 15%"}
+      - uid: expo-high
+        title: Exposure EUR high
+        condition: A
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange: {from: 300, to: 0}
+            model: {expr: "pho_exposure_notional > 200000"}
+        for: 2m
+        annotations: {summary: "Exposure EUR > 200k"}

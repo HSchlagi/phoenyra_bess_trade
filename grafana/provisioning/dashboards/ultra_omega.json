@@ -1,0 +1,91 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Mark",
+      "targets": [
+        {
+          "expr": "pho_mark"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "EMA",
+      "targets": [
+        {
+          "expr": "pho_ema"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "VWAP",
+      "targets": [
+        {
+          "expr": "pho_vwap"
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "SoC %",
+      "targets": [
+        {
+          "expr": "pho_soc_percent"
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Power MW",
+      "targets": [
+        {
+          "expr": "pho_bess_power_mw"
+        }
+      ]
+    },
+    {
+      "type": "gauge",
+      "title": "Temp C",
+      "targets": [
+        {
+          "expr": "pho_temp_celsius"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Exposure MWh",
+      "targets": [
+        {
+          "expr": "pho_exposure_energy"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Exposure EUR",
+      "targets": [
+        {
+          "expr": "pho_exposure_notional"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Realized PnL EUR",
+      "targets": [
+        {
+          "expr": "pho_pnl_realized"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 38,
+  "title": "Phoenyra \u2013 BESS Trading Overview",
+  "version": 1
+}

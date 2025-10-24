@@ -1,0 +1,4 @@
+version: 6
+per_market_rps:
+  EPEX_AT_INTRADAY_15MIN: 120
+  EPEX_DE_INTRADAY_15MIN: 120
