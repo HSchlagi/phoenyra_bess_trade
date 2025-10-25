@@ -28,6 +28,34 @@ services:
     depends_on:
       - exchange
     restart: unless-stopped
+
+  bess-telemetry:
+    build: ./exchange
+    container_name: bess-telemetry
+    command: python bess_telemetry.py
+    environment:
+      - EXCHANGE_URL=http://exchange:9000
+      - BESS_MODBUS_ENABLED=false
+      - BESS_MODBUS_HOST=192.168.1.100
+      - BESS_MODBUS_PORT=502
+      - BESS_MODBUS_UNIT_ID=1
+      - BESS_MODBUS_SOC_REGISTER=0
+      - BESS_MODBUS_POWER_REGISTER=1
+      - BESS_MODBUS_TEMP_REGISTER=2
+      - BESS_MQTT_ENABLED=false
+      - BESS_MQTT_BROKER=localhost
+      - BESS_MQTT_PORT=1883
+      - BESS_MQTT_USERNAME=
+      - BESS_MQTT_PASSWORD=
+      - BESS_MQTT_TOPIC_SOC=bess/soc
+      - BESS_MQTT_TOPIC_POWER=bess/power
+      - BESS_MQTT_TOPIC_TEMP=bess/temperature
+      - BESS_REST_ENABLED=true
+      - BESS_API_KEY=bess_telemetry_key
+      - BESS_UPDATE_INTERVAL=30
+    depends_on:
+      - exchange
+    restart: unless-stopped
   webapp:
     build: ./webapp
     container_name: webapp

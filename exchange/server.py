@@ -137,6 +137,67 @@ def telemetry(b: TelemetryIn):
     G_SOC.set(b.soc_percent); G_PWR.set(b.active_power_mw); G_TEMP.set(b.temperature_c)
     return {"status":"OK"}
 
+# ---- REST API für externe BESS-Systeme ----
+@app.post("/api/bess/telemetry")
+def external_telemetry(api_key: str = Header(None)):
+    """REST API für externe BESS-Systeme"""
+    # API-Key Validierung
+    expected_key = os.getenv("BESS_API_KEY", "bess_telemetry_key")
+    if not api_key or api_key != expected_key:
+        return {"error": "Unauthorized", "status": 401}
+    
+    try:
+        data = request.get_json()
+        if not data:
+            return {"error": "No JSON data provided", "status": 400}
+        
+        # Telemetrie-Daten validieren und verarbeiten
+        telemetry_data = TelemetryIn(
+            soc_percent=float(data.get("soc_percent", 0)),
+            active_power_mw=float(data.get("active_power_mw", 0)),
+            temperature_c=float(data.get("temperature_c", 0))
+        )
+        
+        # An interne Telemetrie-Funktion weiterleiten
+        r.set("telemetry:soc", telemetry_data.soc_percent)
+        r.set("telemetry:power", telemetry_data.active_power_mw)
+        r.set("telemetry:temp", telemetry_data.temperature_c)
+        G_SOC.set(telemetry_data.soc_percent)
+        G_PWR.set(telemetry_data.active_power_mw)
+        G_TEMP.set(telemetry_data.temperature_c)
+        
+        return {
+            "status": "OK",
+            "message": "Telemetrie erfolgreich aktualisiert",
+            "data": {
+                "soc_percent": telemetry_data.soc_percent,
+                "active_power_mw": telemetry_data.active_power_mw,
+                "temperature_c": telemetry_data.temperature_c,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        return {"error": f"Telemetrie-Fehler: {str(e)}", "status": 500}
+
+@app.get("/api/bess/status")
+def get_bess_status():
+    """Aktuelle BESS-Status abrufen"""
+    try:
+        soc = float(r.get("telemetry:soc") or 0.0)
+        power = float(r.get("telemetry:power") or 0.0)
+        temp = float(r.get("telemetry:temp") or 0.0)
+        
+        return {
+            "soc_percent": soc,
+            "active_power_mw": power,
+            "temperature_c": temp,
+            "timestamp": datetime.now().isoformat(),
+            "status": "online" if soc > 0 else "offline"
+        }
+    except Exception as e:
+        return {"error": f"Status-Fehler: {str(e)}", "status": 500}
+
 def soc_limits():
     soc = float(r.get("telemetry:soc") or 100.0)
     temp = float(r.get("telemetry:temp") or 25.0)

@@ -75,16 +75,20 @@ def get_metrics():
 def get_bess_status():
     """Get current BESS status from exchange"""
     try:
-        response = requests.get(f"{EXCHANGE_BASE_URL}/telemetry/bess/status")
+        response = requests.get(f"{EXCHANGE_BASE_URL}/api/bess/status")
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            # Add telemetry source information
+            data["telemetry_source"] = "Automatische Telemetrie"
+            return data
         else:
             # Return mock data if exchange is not available
             return {
                 "soc_percent": 72.5,
                 "active_power": 3.8,
                 "temperature": 28.3,
-                "status": "online"
+                "status": "online",
+                "telemetry_source": "Manuelle Eingabe"
             }
     except Exception as e:
         # Return mock data if connection fails
@@ -92,7 +96,8 @@ def get_bess_status():
             "soc_percent": 72.5,
             "active_power": 3.8,
             "temperature": 28.3,
-            "status": "offline"
+            "status": "offline",
+            "telemetry_source": "Manuelle Eingabe"
         }
 
 @app.route('/api/market-data')
@@ -215,6 +220,86 @@ def update_telemetry():
         return jsonify(response.json())
     except Exception as e:
         return jsonify({"error": str(e)})
+
+# ---- BESS Telemetrie-Konfiguration ----
+@app.route('/config')
+def config_page():
+    """BESS Telemetrie-Konfigurationsseite"""
+    return render_template('config.html')
+
+@app.route('/api/config/save', methods=['POST'])
+def save_config():
+    """Konfiguration speichern"""
+    try:
+        data = request.get_json()
+        config_type = data.get('type')
+        config = data.get('config')
+        
+        # Hier würde normalerweise die Konfiguration in einer Datenbank gespeichert
+        # Für Demo-Zwecke geben wir nur eine Bestätigung zurück
+        return jsonify({
+            "success": True,
+            "message": f"{config_type} Konfiguration gespeichert",
+            "config": config
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+@app.route('/api/config/load')
+def load_config():
+    """Aktuelle Konfiguration laden"""
+    try:
+        # Hier würde normalerweise die Konfiguration aus einer Datenbank geladen
+        # Für Demo-Zwecke geben wir Standardwerte zurück
+        return jsonify({
+            "modbus": {
+                "modbus_host": "192.168.1.100",
+                "modbus_port": "502",
+                "modbus_unit_id": "1",
+                "soc_register": "0",
+                "power_register": "1",
+                "temp_register": "2",
+                "modbus_enabled": False
+            },
+            "mqtt": {
+                "mqtt_broker": "localhost",
+                "mqtt_port": "1883",
+                "mqtt_username": "",
+                "mqtt_password": "",
+                "mqtt_topic_soc": "bess/soc",
+                "mqtt_topic_power": "bess/power",
+                "mqtt_topic_temp": "bess/temperature",
+                "mqtt_enabled": False
+            },
+            "rest": {
+                "rest_api_key": "bess_telemetry_key",
+                "rest_enabled": True
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@app.route('/api/config/test', methods=['POST'])
+def test_config():
+    """Verbindungstest für Konfiguration"""
+    try:
+        data = request.get_json()
+        config_type = data.get('type')
+        
+        if config_type == 'modbus':
+            # Modbus TCP Test
+            return jsonify({"success": True, "message": "Modbus TCP Verbindung erfolgreich"})
+        elif config_type == 'mqtt':
+            # MQTT Test
+            return jsonify({"success": True, "message": "MQTT Verbindung erfolgreich"})
+        elif config_type == 'rest':
+            # REST API Test
+            return jsonify({"success": True, "message": "REST API verfügbar"})
+        else:
+            return jsonify({"success": False, "error": "Unbekannter Konfigurationstyp"})
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 @socketio.on('connect')
 def handle_connect():

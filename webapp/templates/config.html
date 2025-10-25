@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block title %}BESS Telemetrie-Konfiguration{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0 relative z-10">
+    <!-- Hero Section -->
+    <div class="text-center mb-8">
+        <h1 class="aurora-text text-2xl md:text-3xl font-bold mb-4">
+            BESS Telemetrie-Konfiguration
+        </h1>
+        <p class="text-gray-300 text-sm">
+            Konfigurieren Sie Ihre BESS-Anlage für automatische Telemetrie-Erfassung
+        </p>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages mb-4">
+          {% for category, message in messages %}
+            <div class="p-3 rounded-md mb-2 {% if category == 'error' %}bg-red-500 text-white{% elif category == 'success' %}bg-green-500 text-white{% else %}bg-blue-500 text-white{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Configuration Tabs -->
+    <div class="mb-8">
+        <div class="border-b border-gray-600">
+            <nav class="-mb-px flex space-x-8">
+                <button id="modbus-tab" class="config-tab active py-2 px-1 border-b-2 border-blue-500 text-blue-400">
+                    <i class="fas fa-microchip mr-2"></i>Modbus TCP
+                </button>
+                <button id="mqtt-tab" class="config-tab py-2 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-300">
+                    <i class="fas fa-broadcast-tower mr-2"></i>MQTT
+                </button>
+                <button id="rest-tab" class="config-tab py-2 px-1 border-b-2 border-transparent text-gray-400 hover:text-gray-300">
+                    <i class="fas fa-cloud mr-2"></i>REST API
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Modbus TCP Configuration -->
+    <div id="modbus-config" class="config-section">
+        <div class="dark-card p-6 mb-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-microchip mr-2 text-blue-400"></i>Modbus TCP Konfiguration
+            </h3>
+            <p class="text-sm text-gray-400 mb-6">
+                Konfigurieren Sie die Modbus TCP Verbindung zu Ihrer BESS-Anlage oder Wechselrichter
+            </p>
+            
+            <form id="modbusForm" class="space-y-6">
+                <!-- Connection Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">IP-Adresse</label>
+                        <input type="text" name="modbus_host" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="192.168.1.100">
+                        <p class="text-xs text-gray-400 mt-1">IP-Adresse Ihres BESS-Systems</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Port</label>
+                        <input type="number" name="modbus_port" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="502">
+                        <p class="text-xs text-gray-400 mt-1">Standard Modbus Port: 502</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Unit ID</label>
+                        <input type="number" name="modbus_unit_id" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="1">
+                        <p class="text-xs text-gray-400 mt-1">Modbus Unit ID (meist 1)</p>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="modbus_enabled" id="modbus_enabled" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="modbus_enabled" class="ml-2 block text-sm text-gray-300">Modbus TCP aktivieren</label>
+                    </div>
+                </div>
+
+                <!-- Register Mapping -->
+                <div class="border-t border-gray-600 pt-6">
+                    <h4 class="text-md font-medium text-white mb-4">Register-Mapping</h4>
+                    <p class="text-sm text-gray-400 mb-4">Definieren Sie die Register-Adressen für Ihre BESS-Anlage</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">SoC Register</label>
+                            <input type="number" name="soc_register" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="0">
+                            <p class="text-xs text-gray-400 mt-1">Register für State of Charge (%)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Power Register</label>
+                            <input type="number" name="power_register" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="1">
+                            <p class="text-xs text-gray-400 mt-1">Register für aktive Leistung (kW)</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Temperature Register</label>
+                            <input type="number" name="temp_register" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="2">
+                            <p class="text-xs text-gray-400 mt-1">Register für Temperatur (°C)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preset Buttons -->
+                <div class="border-t border-gray-600 pt-6">
+                    <h4 class="text-md font-medium text-white mb-4">Vordefinierte Konfigurationen</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button type="button" class="preset-btn bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm" data-preset="sma">
+                            <i class="fas fa-solar-panel mr-2"></i>SMA Wechselrichter
+                        </button>
+                        <button type="button" class="preset-btn bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm" data-preset="fronius">
+                            <i class="fas fa-bolt mr-2"></i>Fronius Wechselrichter
+                        </button>
+                        <button type="button" class="preset-btn bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-md text-sm" data-preset="tesla">
+                            <i class="fas fa-car mr-2"></i>Tesla Powerwall
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="shimmer-button px-6 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-save mr-2"></i>Modbus Konfiguration speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MQTT Configuration -->
+    <div id="mqtt-config" class="config-section hidden">
+        <div class="dark-card p-6 mb-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-broadcast-tower mr-2 text-green-400"></i>MQTT Konfiguration
+            </h3>
+            <p class="text-sm text-gray-400 mb-6">
+                Konfigurieren Sie die MQTT-Verbindung für IoT-Sensoren und Smart-Grid-Systeme
+            </p>
+            
+            <form id="mqttForm" class="space-y-6">
+                <!-- Broker Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">MQTT Broker</label>
+                        <input type="text" name="mqtt_broker" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="localhost">
+                        <p class="text-xs text-gray-400 mt-1">IP-Adresse oder Hostname des MQTT Brokers</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Port</label>
+                        <input type="number" name="mqtt_port" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="1883">
+                        <p class="text-xs text-gray-400 mt-1">Standard MQTT Port: 1883</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Username (optional)</label>
+                        <input type="text" name="mqtt_username" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="mqtt_user">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Password (optional)</label>
+                        <input type="password" name="mqtt_password" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="flex items-center">
+                    <input type="checkbox" name="mqtt_enabled" id="mqtt_enabled" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                    <label for="mqtt_enabled" class="ml-2 block text-sm text-gray-300">MQTT aktivieren</label>
+                </div>
+
+                <!-- Topic Configuration -->
+                <div class="border-t border-gray-600 pt-6">
+                    <h4 class="text-md font-medium text-white mb-4">MQTT Topics</h4>
+                    <p class="text-sm text-gray-400 mb-4">Definieren Sie die MQTT Topics für Ihre Sensoren</p>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">SoC Topic</label>
+                            <input type="text" name="mqtt_topic_soc" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="bess/soc">
+                            <p class="text-xs text-gray-400 mt-1">Topic für State of Charge Daten</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Power Topic</label>
+                            <input type="text" name="mqtt_topic_power" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="bess/power">
+                            <p class="text-xs text-gray-400 mt-1">Topic für Leistungsdaten</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Temperature Topic</label>
+                            <input type="text" name="mqtt_topic_temp" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="bess/temperature">
+                            <p class="text-xs text-gray-400 mt-1">Topic für Temperaturdaten</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Format -->
+                <div class="border-t border-gray-600 pt-6">
+                    <h4 class="text-md font-medium text-white mb-4">Message Format</h4>
+                    <div class="bg-gray-800 p-4 rounded-md">
+                        <pre class="text-sm text-gray-300"><code>{
+  "value": 75.5,
+  "timestamp": "2025-01-25T20:30:00Z",
+  "unit": "%"
+}</code></pre>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="shimmer-button px-6 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-save mr-2"></i>MQTT Konfiguration speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- REST API Configuration -->
+    <div id="rest-config" class="config-section hidden">
+        <div class="dark-card p-6 mb-6">
+            <h3 class="text-lg leading-6 font-medium text-white mb-4">
+                <i class="fas fa-cloud mr-2 text-purple-400"></i>REST API Konfiguration
+            </h3>
+            <p class="text-sm text-gray-400 mb-6">
+                Konfigurieren Sie die REST API für externe Systeme und Integrationen
+            </p>
+            
+            <form id="restForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">API Key</label>
+                        <input type="text" name="rest_api_key" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="bess_telemetry_key">
+                        <p class="text-xs text-gray-400 mt-1">API-Schlüssel für externe Systeme</p>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="rest_enabled" id="rest_enabled" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                        <label for="rest_enabled" class="ml-2 block text-sm text-gray-300">REST API aktivieren</label>
+                    </div>
+                </div>
+
+                <!-- API Endpoint Info -->
+                <div class="border-t border-gray-600 pt-6">
+                    <h4 class="text-md font-medium text-white mb-4">API Endpoints</h4>
+                    <div class="space-y-4">
+                        <div class="bg-gray-800 p-4 rounded-md">
+                            <h5 class="text-sm font-medium text-white mb-2">Telemetrie senden</h5>
+                            <code class="text-sm text-gray-300">POST /api/bess/telemetry</code>
+                            <p class="text-xs text-gray-400 mt-1">Header: X-API-KEY: bess_telemetry_key</p>
+                        </div>
+                        <div class="bg-gray-800 p-4 rounded-md">
+                            <h5 class="text-sm font-medium text-white mb-2">Status abrufen</h5>
+                            <code class="text-sm text-gray-300">GET /api/bess/status</code>
+                            <p class="text-xs text-gray-400 mt-1">Aktuelle BESS-Telemetrie abrufen</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Example Request -->
+                <div class="border-t border-gray-600 pt-6">
+                    <h4 class="text-md font-medium text-white mb-4">Beispiel Request</h4>
+                    <div class="bg-gray-800 p-4 rounded-md">
+                        <pre class="text-sm text-gray-300"><code>curl -X POST http://localhost:9000/api/bess/telemetry \
+  -H "X-API-KEY: bess_telemetry_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "soc_percent": 75.5,
+    "active_power_mw": 2.5,
+    "temperature_c": 28.3
+  }'</code></pre>
+                    </div>
+                </div>
+
+                <div class="flex justify-end">
+                    <button type="submit" class="shimmer-button px-6 py-2 rounded-md text-sm font-medium">
+                        <i class="fas fa-save mr-2"></i>REST API Konfiguration speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Test Connection -->
+    <div class="dark-card p-6">
+        <h3 class="text-lg leading-6 font-medium text-white mb-4">
+            <i class="fas fa-wrench mr-2 text-yellow-400"></i>Verbindung testen
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button id="test-modbus" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm">
+                <i class="fas fa-microchip mr-2"></i>Modbus TCP testen
+            </button>
+            <button id="test-mqtt" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm">
+                <i class="fas fa-broadcast-tower mr-2"></i>MQTT testen
+            </button>
+            <button id="test-rest" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm">
+                <i class="fas fa-cloud mr-2"></i>REST API testen
+            </button>
+        </div>
+        <div id="test-results" class="mt-4"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Configuration Management
+    class ConfigManager {
+        constructor() {
+            this.init();
+        }
+
+        init() {
+            this.setupTabs();
+            this.setupPresets();
+            this.setupForms();
+            this.setupTestButtons();
+            this.loadCurrentConfig();
+        }
+
+        setupTabs() {
+            const tabs = document.querySelectorAll('.config-tab');
+            const sections = document.querySelectorAll('.config-section');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active class from all tabs
+                    tabs.forEach(t => {
+                        t.classList.remove('active', 'border-blue-500', 'text-blue-400');
+                        t.classList.add('border-transparent', 'text-gray-400');
+                    });
+
+                    // Hide all sections
+                    sections.forEach(s => s.classList.add('hidden'));
+
+                    // Activate clicked tab
+                    tab.classList.add('active', 'border-blue-500', 'text-blue-400');
+                    tab.classList.remove('border-transparent', 'text-gray-400');
+
+                    // Show corresponding section
+                    const sectionId = tab.id.replace('-tab', '-config');
+                    document.getElementById(sectionId).classList.remove('hidden');
+                });
+            });
+        }
+
+        setupPresets() {
+            const presetButtons = document.querySelectorAll('.preset-btn');
+            presetButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const preset = btn.dataset.preset;
+                    this.applyPreset(preset);
+                });
+            });
+        }
+
+        applyPreset(preset) {
+            const presets = {
+                'sma': {
+                    modbus_host: '192.168.1.100',
+                    modbus_port: '502',
+                    modbus_unit_id: '1',
+                    soc_register: '0',
+                    power_register: '1',
+                    temp_register: '2'
+                },
+                'fronius': {
+                    modbus_host: '192.168.1.101',
+                    modbus_port: '502',
+                    modbus_unit_id: '1',
+                    soc_register: '100',
+                    power_register: '101',
+                    temp_register: '102'
+                },
+                'tesla': {
+                    modbus_host: '192.168.1.102',
+                    modbus_port: '502',
+                    modbus_unit_id: '1',
+                    soc_register: '200',
+                    power_register: '201',
+                    temp_register: '202'
+                }
+            };
+
+            if (presets[preset]) {
+                Object.entries(presets[preset]).forEach(([key, value]) => {
+                    const input = document.querySelector(`[name="${key}"]`);
+                    if (input) {
+                        input.value = value;
+                    }
+                });
+            }
+        }
+
+        setupForms() {
+            const forms = ['modbusForm', 'mqttForm', 'restForm'];
+            forms.forEach(formId => {
+                const form = document.getElementById(formId);
+                if (form) {
+                    form.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        this.saveConfig(formId);
+                    });
+                }
+            });
+        }
+
+        setupTestButtons() {
+            document.getElementById('test-modbus').addEventListener('click', () => this.testConnection('modbus'));
+            document.getElementById('test-mqtt').addEventListener('click', () => this.testConnection('mqtt'));
+            document.getElementById('test-rest').addEventListener('click', () => this.testConnection('rest'));
+        }
+
+        async saveConfig(formId) {
+            const form = document.getElementById(formId);
+            const formData = new FormData(form);
+            const config = Object.fromEntries(formData.entries());
+
+            try {
+                const response = await fetch('/api/config/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ type: formId.replace('Form', ''), config })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    this.showMessage('Konfiguration erfolgreich gespeichert!', 'success');
+                } else {
+                    this.showMessage('Fehler beim Speichern der Konfiguration', 'error');
+                }
+            } catch (error) {
+                this.showMessage('Fehler beim Speichern der Konfiguration', 'error');
+            }
+        }
+
+        async testConnection(type) {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.innerHTML = '<div class="text-blue-400">Teste Verbindung...</div>';
+
+            try {
+                const response = await fetch('/api/config/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ type })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    resultsDiv.innerHTML = `<div class="text-green-400">✅ ${type.toUpperCase()} Verbindung erfolgreich!</div>`;
+                } else {
+                    resultsDiv.innerHTML = `<div class="text-red-400">❌ ${type.toUpperCase()} Verbindung fehlgeschlagen: ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="text-red-400">❌ ${type.toUpperCase()} Test fehlgeschlagen: ${error.message}</div>`;
+            }
+        }
+
+        async loadCurrentConfig() {
+            try {
+                const response = await fetch('/api/config/load');
+                const config = await response.json();
+                
+                // Load Modbus config
+                if (config.modbus) {
+                    Object.entries(config.modbus).forEach(([key, value]) => {
+                        const input = document.querySelector(`[name="${key}"]`);
+                        if (input) {
+                            input.value = value;
+                        }
+                    });
+                }
+
+                // Load MQTT config
+                if (config.mqtt) {
+                    Object.entries(config.mqtt).forEach(([key, value]) => {
+                        const input = document.querySelector(`[name="${key}"]`);
+                        if (input) {
+                            input.value = value;
+                        }
+                    });
+                }
+
+                // Load REST config
+                if (config.rest) {
+                    Object.entries(config.rest).forEach(([key, value]) => {
+                        const input = document.querySelector(`[name="${key}"]`);
+                        if (input) {
+                            input.value = value;
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
+
+        showMessage(message, type) {
+            const flashDiv = document.querySelector('.flash-messages') || document.createElement('div');
+            flashDiv.className = 'flash-messages mb-4';
+            flashDiv.innerHTML = `
+                <div class="p-3 rounded-md mb-2 ${type === 'error' ? 'bg-red-500' : 'bg-green-500'} text-white">
+                    ${message}
+                </div>
+            `;
+            document.querySelector('.px-4').insertBefore(flashDiv, document.querySelector('.px-4').firstChild);
+            
+            setTimeout(() => {
+                flashDiv.remove();
+            }, 5000);
+        }
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        new ConfigManager();
+    });
+</script>
+{% endblock %}

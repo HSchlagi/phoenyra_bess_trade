@@ -39,6 +39,7 @@
                     <dl>
                         <dt class="text-sm font-medium text-gray-300 truncate">BESS SoC</dt>
                         <dd class="text-lg font-medium text-white number-ticker" id="soc-percent">--%</dd>
+                        <dt class="text-xs text-gray-400 truncate" id="telemetry-source">Manuelle Eingabe</dt>
                     </dl>
                 </div>
             </div>
@@ -249,6 +250,16 @@
             document.getElementById('soc-percent').textContent = `${data.soc_percent}%`;
             document.getElementById('active-power').textContent = `${data.active_power} MW`;
             document.getElementById('temperature').textContent = `${data.temperature}°C`;
+            
+            // Update telemetry source
+            const telemetrySource = document.getElementById('telemetry-source');
+            if (data.telemetry_source) {
+                telemetrySource.textContent = data.telemetry_source;
+                telemetrySource.className = 'text-xs text-blue-400 truncate';
+            } else {
+                telemetrySource.textContent = 'Manuelle Eingabe';
+                telemetrySource.className = 'text-xs text-gray-400 truncate';
+            }
             
             // Update connection status
             const statusElement = document.getElementById('connection-status');

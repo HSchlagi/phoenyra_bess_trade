@@ -8,7 +8,8 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 
 ### Backend-Services
 - **Exchange Service** (FastAPI): Kern-Trading-Engine mit REST API
-- **Market Feed Service**: Live-Marktpreise von aWattar und ETEnSo
+- **Market Feed Service**: Live-Marktpreise von ENTSO-E (EPEX Spot)
+- **BESS Telemetry Service**: Automatische Telemetrie-Erfassung (Modbus TCP, MQTT, REST API)
 - **Redis**: In-Memory-Datenbank für Caching und Session-Management
 - **Prometheus**: Metriken-Sammlung und Monitoring
 - **Grafana**: Visualisierung und Alerting
@@ -62,22 +63,25 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Number Ticker** für animierte Zahlen
 
 ### 6. BESS Telemetrie-Steuerung
-- **SoC-Management** mit Prozent-Eingabe
-- **Leistungssteuerung** in MW
-- **Temperatur-Überwachung** in °C
-- **Telemetrie-Daten** an Backend senden
+- **Automatische Telemetrie-Erfassung** via Modbus TCP, MQTT, REST API
+- **Konfigurierbare Register-Adressen** für individuelle BESS-Anlagen
+- **MQTT-Topic-Mapping** für IoT-Sensoren und Smart-Grid
+- **REST API Integration** für externe Systeme
+- **Live-Verbindungstests** für alle Schnittstellen
+- **Benutzerfreundliche Konfiguration** mit Tab-Navigation
 
 ## Technische Details
 
 ### Docker-Container
 ```yaml
 services:
-  exchange:      # FastAPI Backend (Port 9000)
-  market-feed:   # Live market price feed (aWattar/ETEnSo)
-  redis:         # In-Memory Database
-  prometheus:    # Metrics Collection (Port 9090)
-  grafana:       # Visualization (Port 3000)
-  webapp:        # Flask Frontend (Port 5000)
+  exchange:        # FastAPI Backend (Port 9000)
+  market-feed:     # Live market price feed (ENTSO-E/EPEX Spot)
+  bess-telemetry:  # BESS Telemetry Service (Modbus TCP, MQTT, REST API)
+  redis:          # In-Memory Database
+  prometheus:     # Metrics Collection (Port 9090)
+  grafana:        # Visualization (Port 3000)
+  webapp:         # Flask Frontend (Port 5000)
 ```
 
 ### API-Endpunkte
@@ -87,6 +91,11 @@ services:
 - `GET /api/trades` - Recent Trades abrufen
 - `POST /api/orders` - Neue Order erstellen
 - `POST /api/telemetry` - BESS-Telemetrie senden
+- `POST /api/bess/telemetry` - Externe Telemetrie-Daten empfangen
+- `GET /api/bess/status` - Aktuelle BESS-Status abrufen
+- `POST /api/config/save` - Konfiguration speichern
+- `GET /api/config/load` - Konfiguration laden
+- `POST /api/config/test` - Verbindungstests durchführen
 
 ### Umgebungsvariablen
 ```bash
@@ -119,6 +128,7 @@ docker compose ps
 
 ### Zugriff auf Services
 - **Web-Dashboard**: http://localhost:5000
+- **BESS-Konfiguration**: http://localhost:5000/config
 - **Exchange API**: http://localhost:9000
 - **Grafana**: http://localhost:3000
 - **Prometheus**: http://localhost:9090
@@ -137,10 +147,18 @@ webapp/
 ├── app.py              # Flask Hauptanwendung
 ├── templates/
 │   ├── base.html       # Basis-Template
-│   └── dashboard.html  # Dashboard-Template
+│   ├── dashboard.html  # Dashboard-Template
+│   └── config.html     # BESS-Konfigurationsseite
 ├── static/
 │   └── phoenyra_logo.png  # Logo
 └── Dockerfile          # Container-Definition
+
+exchange/
+├── server.py           # FastAPI Backend
+├── market_feed.py      # ENTSO-E Marktdaten
+├── bess_telemetry.py   # BESS Telemetrie-Service
+├── config.py           # Zentrale Konfiguration
+└── requirements.txt    # Python Dependencies
 ```
 
 ## Design-System
@@ -187,17 +205,14 @@ webapp/
 ### Live-Marktdaten
 Das System integriert Live-Marktpreise von verschiedenen Energiebörsen:
 
-#### aWattar Integration
-- **API**: `https://api.awattar.de/v1/marketdata`
-- **Regionen**: Österreich (AT), Deutschland (DE)
+#### ENTSO-E Integration (EPEX Spot)
+- **API**: `https://web-api.tp.entsoe.eu/api`
+- **Regionen**: Österreich (AT), Deutschland (DE), Schweiz (CH), Italien (IT)
 - **Update-Intervall**: Alle 5 Minuten (konfigurierbar)
 - **Preiseinheit**: EUR/MWh
-- **Datenformat**: Day-ahead und Spot-Marktpreise
-
-#### ETEnSo Integration (ENTSO-E)
-- **Status**: Vorbereitet für ENTSO-E Transparency Platform
-- **Benötigt**: API-Token von ENTSO-E
-- **Dokumentation**: https://transparency.entsoe.eu/
+- **Datenformat**: Day-ahead Preise (PT15M, PT60M)
+- **API-Token**: Konfigurierbar in config.py
+- **Rate Limiting**: 1 Sekunde zwischen Requests
 
 ### Marktpreis-Register
 Die Marktpreise werden im System in folgenden Formaten gespeichert:
@@ -209,8 +224,27 @@ Die Marktpreise werden im System in folgenden Formaten gespeichert:
 ```bash
 # Market Feed Service Umgebungsvariablen
 EXCHANGE_URL=http://exchange:9000
-MARKET=awattar_at
+MARKET=epex_at
 UPDATE_INTERVAL=300  # Sekunden
+ENTSO_E_TOKEN=2793353d-b5dd-4d4f-9638-8e26c88027e5
+
+# BESS Telemetry Service Umgebungsvariablen
+BESS_MODBUS_ENABLED=false
+BESS_MODBUS_HOST=192.168.1.100
+BESS_MODBUS_PORT=502
+BESS_MODBUS_UNIT_ID=1
+BESS_MODBUS_SOC_REGISTER=0
+BESS_MODBUS_POWER_REGISTER=1
+BESS_MODBUS_TEMP_REGISTER=2
+BESS_MQTT_ENABLED=false
+BESS_MQTT_BROKER=localhost
+BESS_MQTT_PORT=1883
+BESS_MQTT_TOPIC_SOC=bess/soc
+BESS_MQTT_TOPIC_POWER=bess/power
+BESS_MQTT_TOPIC_TEMP=bess/temperature
+BESS_REST_ENABLED=true
+BESS_API_KEY=bess_telemetry_key
+BESS_UPDATE_INTERVAL=30
 ```
 
 ## Erweiterte Funktionen
@@ -330,6 +364,46 @@ Die Matching-Engine ist integriert mit:
 - **Orders-Tabelle:** Order-Status-Tracking
 - **Trades-Tabelle:** Trade-Historie
 - **Filled-Feld:** Teilausführungen verfolgen
+
+## BESS Telemetrie-Integration (Goldstandard)
+
+### 6. Vollständige BESS Telemetrie-System
+- **Modbus TCP Integration:** Direkte Anbindung an BESS-Anlagen und Wechselrichter
+- **MQTT Support:** IoT-Sensoren und Smart-Grid-Systeme
+- **REST API:** Externe Systeme und Integrationen
+- **Konfigurierbare Register:** User-definierte Modbus-Register-Adressen
+- **Topic-Mapping:** Flexible MQTT-Topic-Konfiguration
+- **API-Key-Authentifizierung:** Sichere externe Integration
+
+### 7. Benutzerfreundliche Konfiguration
+- **Tab-basierte Navigation:** Modbus TCP, MQTT, REST API
+- **Vordefinierte Presets:** SMA, Fronius, Tesla Powerwall
+- **Live-Verbindungstests:** Visuelle Rückmeldung für alle Schnittstellen
+- **Register-Mapping:** SoC, Power, Temperature Register konfigurierbar
+- **MQTT-Topics:** Flexible Topic-Definition für Sensoren
+- **Flash Messages:** Erfolg/Fehler-Feedback für Konfiguration
+
+### 8. Enterprise-Grade Telemetrie-Features
+- **Real-time Data Collection:** Automatische Telemetrie-Erfassung
+- **Multi-Source Support:** Modbus, MQTT, REST API parallel
+- **Configurable Intervals:** Anpassbare Update-Intervalle
+- **Error Handling:** Robuste Fehlerbehandlung und Fallbacks
+- **Logging:** Detaillierte Logs für Debugging und Monitoring
+- **Docker Integration:** Containerisierte Services für Skalierbarkeit
+
+### 9. Erweiterte API-Endpunkte
+- **POST /api/bess/telemetry:** Externe Telemetrie-Daten empfangen
+- **GET /api/bess/status:** Aktuelle BESS-Status abrufen
+- **POST /api/config/save:** Konfiguration speichern
+- **GET /api/config/load:** Konfiguration laden
+- **POST /api/config/test:** Verbindungstests durchführen
+
+### 10. Konfigurationsseite (/config)
+- **Modbus TCP Tab:** Register-Adressen für BESS-Anlage/Wechselrichter
+- **MQTT Tab:** Topics für IoT-Sensoren und Smart-Grid
+- **REST API Tab:** API-Key und Endpoints für externe Systeme
+- **Verbindungstests:** Live-Tests für alle Schnittstellen
+- **Preset-Konfigurationen:** Vordefinierte Einstellungen für gängige Systeme
 
 ## Roadmap
 

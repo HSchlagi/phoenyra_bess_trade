@@ -276,6 +276,9 @@
                             <a href="/#bess-status" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
                                 <i class="fas fa-battery-half mr-1"></i>BESS Status
                             </a>
+                            <a href="/config" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
+                                <i class="fas fa-cog mr-1"></i>Konfiguration
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -289,6 +292,7 @@
                             <span class="status-indicator status-offline"></span>
                             Verbindung wird hergestellt...
                         </span>
+                        <span class="text-white text-sm" id="current-date"></span>
                         <span class="text-white text-sm" id="current-time"></span>
                     </div>
                 </div>
@@ -334,14 +338,16 @@
             // Handle order updates here
         });
         
-        // Update time every second
-        function updateTime() {
+        // Update date and time every second
+        function updateDateTime() {
             const now = new Date();
+            document.getElementById('current-date').textContent = 
+                now.toLocaleDateString('de-DE');
             document.getElementById('current-time').textContent = 
                 now.toLocaleTimeString('de-DE');
         }
-        updateTime();
-        setInterval(updateTime, 1000);
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
         
         // Theme Toggle
         const themeToggle = document.getElementById('theme-toggle');
