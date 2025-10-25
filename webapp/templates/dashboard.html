@@ -6,13 +6,26 @@
 <div class="px-4 py-6 sm:px-0 relative z-10">
     <!-- Hero Section with Aurora Text -->
     <div class="text-center mb-8">
-        <h1 class="aurora-text text-4xl md:text-6xl font-bold mb-4">
+        <h1 class="aurora-text text-2xl md:text-3xl font-bold mb-4">
             BESS Trading Dashboard
         </h1>
-        <p class="text-gray-300 text-lg">
+        <p class="text-gray-300 text-sm">
             Real-time Battery Energy Storage System Optimization & Trading
         </p>
     </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages mb-4">
+          {% for category, message in messages %}
+            <div class="p-3 rounded-md mb-2 {% if category == 'error' %}bg-red-500 text-white{% elif category == 'success' %}bg-green-500 text-white{% else %}bg-blue-500 text-white{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
 
     <!-- Status Cards with Magic UI Effects -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -84,6 +97,7 @@
             <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 <i class="fas fa-chart-line mr-2 text-blue-400"></i>Marktpreise
             </h3>
+            <p class="text-xs text-gray-400 mb-2">EPEX Spot Day-Ahead Preise (Österreich) via ENTSO-E</p>
             <div id="priceChart" class="h-64"></div>
         </div>
 
@@ -92,6 +106,7 @@
             <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 <i class="fas fa-chart-bar mr-2 text-green-400"></i>VWAP (15min)
             </h3>
+            <p class="text-xs text-gray-400 mb-2">Volume-Weighted Average Price</p>
             <div id="vwapChart" class="h-64"></div>
         </div>
     </div>
@@ -103,7 +118,7 @@
             <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 <i class="fas fa-plus-circle mr-2 text-purple-400"></i>Neue Order
             </h3>
-            <form id="orderForm" class="space-y-4">
+            <form id="orderForm" action="/order" method="POST" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Seite</label>
                     <select name="side" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
@@ -113,17 +128,17 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Menge (MWh)</label>
-                    <input type="number" name="quantity" step="0.1" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="1.0">
+                    <input type="number" name="amount" step="0.1" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="1.0">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Preis (€/MWh)</label>
-                    <input type="number" name="price" step="0.01" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="85.50">
+                    <input type="number" name="price" step="0.01" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="0.43">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Markt</label>
                     <select name="market" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="spot">Spot</option>
-                        <option value="intraday">Intraday</option>
+                        <option value="epex_at">EPEX AT</option>
+                        <option value="EPEX_AT_INTRADAY_15MIN">EPEX AT Intraday</option>
                     </select>
                 </div>
                 <button type="submit" class="shimmer-button w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium">
@@ -309,6 +324,13 @@
                     }
                 },
                 yaxis: {
+                    title: {
+                        text: 'EUR/MWh',
+                        style: {
+                            color: '#ffffff',
+                            fontSize: '12px'
+                        }
+                    },
                     labels: {
                         style: {
                             colors: '#ffffff'
@@ -319,7 +341,12 @@
                     borderColor: 'rgba(255, 255, 255, 0.1)'
                 },
                 tooltip: {
-                    theme: 'dark'
+                    theme: 'dark',
+                    y: {
+                        formatter: function(value) {
+                            return value.toFixed(2) + ' EUR/MWh';
+                        }
+                    }
                 },
                 legend: {
                     labels: {
@@ -379,6 +406,13 @@
                     }
                 },
                 yaxis: {
+                    title: {
+                        text: 'EUR/MWh',
+                        style: {
+                            color: '#ffffff',
+                            fontSize: '12px'
+                        }
+                    },
                     labels: {
                         style: {
                             colors: '#ffffff'
@@ -419,10 +453,9 @@
                 ordersContainer.innerHTML = ordersData.orders.map(order => `
                     <div class="bg-gray-700 p-3 rounded-lg">
                         <div class="flex justify-between items-center">
-                            <span class="text-white font-medium">${order.side} ${order.quantity} MWh</span>
-                            <span class="text-gray-300">${order.price} €/MWh</span>
+                            <span class="text-white font-medium">${order.side} ${order.quantity_mwh} MWh @ ${order.price} €/MWh</span>
                         </div>
-                        <div class="text-xs text-gray-400 mt-1">${order.status}</div>
+                        <div class="text-xs text-gray-400 mt-1">${order.status} - ${order.market}</div>
                     </div>
                 `).join('');
             } else {
@@ -441,8 +474,7 @@
                 tradesContainer.innerHTML = tradesData.trades.map(trade => `
                     <div class="bg-gray-700 p-3 rounded-lg">
                         <div class="flex justify-between items-center">
-                            <span class="text-white font-medium">${trade.side} ${trade.quantity} MWh</span>
-                            <span class="text-gray-300">${trade.price} €/MWh</span>
+                            <span class="text-white font-medium">${trade.side} ${trade.quantity_mwh} MWh @ ${trade.price} €/MWh</span>
                         </div>
                         <div class="text-xs text-gray-400 mt-1">${new Date(trade.timestamp).toLocaleTimeString('de-DE')}</div>
                     </div>
@@ -458,35 +490,7 @@
         }
 
         setupEventListeners() {
-            // Order Form Handler
-            document.getElementById('orderForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const formData = new FormData(e.target);
-                const orderData = {
-                    side: formData.get('side'),
-                    quantity: parseFloat(formData.get('quantity')),
-                    price: parseFloat(formData.get('price')),
-                    market: formData.get('market')
-                };
-                
-                // Send order to backend
-                fetch('/api/orders', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(orderData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Order created:', data);
-                    e.target.reset();
-                })
-                .catch(error => {
-                    console.error('Error creating order:', error);
-                });
-            });
+            // Order Form Handler - Form now submits normally to /order
 
             // Telemetry Form Handler
             document.getElementById('telemetryForm').addEventListener('submit', (e) => {

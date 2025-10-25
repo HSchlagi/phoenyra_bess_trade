@@ -15,6 +15,19 @@ services:
       - "9000:9000"
     depends_on:
       - redis
+  market-feed:
+    build: ./exchange
+    container_name: market-feed
+    command: python market_feed.py
+    environment:
+      - EXCHANGE_URL=http://exchange:9000
+      - MARKET=epex_at
+      - BIDDING_ZONE=AT
+      - UPDATE_INTERVAL=300
+      - ENTSO_E_TOKEN=2793353d-b5dd-4d4f-9638-8e26c88027e5
+    depends_on:
+      - exchange
+    restart: unless-stopped
   webapp:
     build: ./webapp
     container_name: webapp

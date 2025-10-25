@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session, send_from_directory
+from flask import Flask, render_template, request, jsonify, session, send_from_directory, flash, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import requests
 import json
@@ -7,7 +7,7 @@ import websockets
 import hmac
 import hashlib
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
@@ -148,6 +148,50 @@ def create_order():
     order_data = request.get_json()
     result = trading_api.create_order(order_data)
     return jsonify(result)
+
+@app.route('/order', methods=['POST'])
+def create_order_form():
+    """Handle form submission for order creation"""
+    try:
+        side = request.form["side"].upper()  # Convert to BUY/SELL
+        quantity_mwh = float(request.form["amount"])
+        limit_price_eur_mwh = float(request.form["price"])
+        market = request.form["market"]
+        
+        # Generate delivery times for 1 hour
+        now = datetime.now()
+        delivery_start = now.isoformat()
+        delivery_end = (now + timedelta(hours=1)).isoformat()
+
+        order_data = {
+            "side": side,  # "BUY" or "SELL"
+            "quantity_mwh": quantity_mwh,
+            "limit_price_eur_mwh": limit_price_eur_mwh,
+            "market": market,
+            "delivery_start": delivery_start,
+            "delivery_end": delivery_end,
+            "order_type": "LIMIT",
+            "time_in_force": "GFD"
+        }
+
+        response = requests.post(f"{EXCHANGE_BASE_URL}/orders", json=order_data)
+        response.raise_for_status()
+        
+        flash("Order successfully created!", "success")
+    except requests.exceptions.HTTPError as e:
+        try:
+            error_detail = e.response.json().get("detail", "Unknown error")
+        except (json.JSONDecodeError, ValueError):
+            error_detail = e.response.text or f"HTTP {e.response.status_code}"
+        flash(f"Error creating order: {error_detail}", "error")
+    except requests.exceptions.RequestException as e:
+        flash(f"Network error creating order: {e}", "error")
+    except ValueError:
+        flash("Invalid amount or price. Please enter numerical values.", "error")
+    except Exception as e:
+        flash(f"Error: {str(e)}", "error")
+    
+    return redirect(url_for("dashboard"))
 
 @app.route('/api/pricefeed', methods=['POST'])
 def push_price():

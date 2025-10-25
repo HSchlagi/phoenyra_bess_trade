@@ -3,5 +3,6 @@ WORKDIR /app
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY server.py /app/server.py
+COPY market_feed.py /app/market_feed.py
 EXPOSE 9000
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "9000"]

@@ -8,6 +8,7 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 
 ### Backend-Services
 - **Exchange Service** (FastAPI): Kern-Trading-Engine mit REST API
+- **Market Feed Service**: Live-Marktpreise von aWattar und ETEnSo
 - **Redis**: In-Memory-Datenbank für Caching und Session-Management
 - **Prometheus**: Metriken-Sammlung und Monitoring
 - **Grafana**: Visualisierung und Alerting
@@ -41,6 +42,7 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Order-Erstellung** mit Side (Buy/Sell), Menge, Preis und Markt
 - **Aktive Orders** Übersicht
 - **Recent Trades** Anzeige
+- **Live-Marktpreise** von aWattar (Österreich/Deutschland)
 - **Marktpreise** Visualisierung (Mark, EMA, VWAP)
 - **VWAP-Chart** mit 15-Minuten-Intervallen
 
@@ -70,11 +72,12 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 ### Docker-Container
 ```yaml
 services:
-  exchange:     # FastAPI Backend (Port 9000)
-  redis:        # In-Memory Database
-  prometheus:   # Metrics Collection (Port 9090)
-  grafana:      # Visualization (Port 3000)
-  webapp:       # Flask Frontend (Port 5000)
+  exchange:      # FastAPI Backend (Port 9000)
+  market-feed:   # Live market price feed (aWattar/ETEnSo)
+  redis:         # In-Memory Database
+  prometheus:    # Metrics Collection (Port 9090)
+  grafana:       # Visualization (Port 3000)
+  webapp:        # Flask Frontend (Port 5000)
 ```
 
 ### API-Endpunkte
@@ -179,12 +182,44 @@ webapp/
 - **WebSocket-Verschlüsselung** für Real-time-Daten
 - **Input-Validierung** für alle Benutzereingaben
 
+## Marktpreis-Integration
+
+### Live-Marktdaten
+Das System integriert Live-Marktpreise von verschiedenen Energiebörsen:
+
+#### aWattar Integration
+- **API**: `https://api.awattar.de/v1/marketdata`
+- **Regionen**: Österreich (AT), Deutschland (DE)
+- **Update-Intervall**: Alle 5 Minuten (konfigurierbar)
+- **Preiseinheit**: EUR/MWh
+- **Datenformat**: Day-ahead und Spot-Marktpreise
+
+#### ETEnSo Integration (ENTSO-E)
+- **Status**: Vorbereitet für ENTSO-E Transparency Platform
+- **Benötigt**: API-Token von ENTSO-E
+- **Dokumentation**: https://transparency.entsoe.eu/
+
+### Marktpreis-Register
+Die Marktpreise werden im System in folgenden Formaten gespeichert:
+- **Mark Price**: Aktueller Marktpreis
+- **EMA**: Exponentiell gleitender Durchschnitt (α=0.2)
+- **VWAP**: Volume-Weighted Average Price (über 96 Zeitpunkte)
+
+### Konfiguration
+```bash
+# Market Feed Service Umgebungsvariablen
+EXCHANGE_URL=http://exchange:9000
+MARKET=awattar_at
+UPDATE_INTERVAL=300  # Sekunden
+```
+
 ## Erweiterte Funktionen
 
 ### Real-time Updates
 - **WebSocket-Verbindungen** für Live-Daten
 - **Automatische Aktualisierung** alle 10 Sekunden
 - **Echtzeit-Chart-Updates** ohne Seitenneuladung
+- **Live-Marktpreise** von aWattar (alle 5 Minuten)
 
 ### Responsive Design
 - **Mobile-First** Ansatz
@@ -215,10 +250,91 @@ docker compose logs -f webapp
 docker exec -it webapp bash
 ```
 
+## Automatische Order-Ausführung (Matching-Engine)
+
+### Übersicht
+Das System verfügt über eine vollautomatische **Matching-Engine**, die eingehende Orders sofort mit kompatiblen Gegenorders matcht und Trades ausführt. Die Implementierung folgt bewährten Praktiken aus dem Electronic Trading.
+
+### Funktionsweise
+
+#### 1. Order-Erstellung
+Jede neue Order wird in der SQLite-Datenbank gespeichert mit Status `ACCEPTED` und `filled = 0.0` (noch keine Ausführung).
+
+#### 2. Automatisches Matching
+Sofort nach dem Speichern startet die Matching-Engine (`try_match_order`):
+
+**Für BUY-Orders:**
+- Sucht SELL-Orders im selben Markt
+- Bedingung: `ask_price ≤ limit_price`
+- Sortierung: Preis aufsteigend, dann Zeitstempel
+
+**Für SELL-Orders:**
+- Sucht BUY-Orders im selben Markt
+- Bedingung: `bid_price ≥ limit_price`
+- Sortierung: Preis absteigend, dann Zeitstempel
+
+#### 3. Trade-Ausführung
+Wenn eine passende Order gefunden wird:
+1. **Volumen-Berechnung:** `min(remaining_qty, match_available)`
+2. **Preis-Berechnung:** Durchschnitt aus beiden Limit-Preisen
+3. **Trade-Write:** In Datenbank schreiben
+4. **Order-Update:** `filled` erhöhen, Status auf `FILLED` wenn vollständig
+5. **WebSocket-Event:** An alle Clients senden
+
+### Besonderheiten
+- **Teilausführungen möglich:** Orders können mehrfach matchen
+- **Fairer Preis:** Durchschnitt aus Buy- und Sell-Limit
+- **Sofortige Ausführung:** Matching erfolgt unmittelbar nach Order-Erstellung
+- **Faire Reihenfolge:** Preis → Zeitstempel (First-Come-First-Served)
+- **Robustheit:** Atomare Transaktionen, keine Inkonsistenzen
+
+### Integration
+Die Matching-Engine ist integriert mit:
+- **SoC-Limits:** BUY nur bei SoC ≥ 15%, SELL nur bei SoC ≤ 90%
+- **Throttling:** Rate-Limiting pro Markt
+- **Exposure-Tracking:** Automatische Berechnung
+- **Prometheus-Metriken:** G_EXPO_E, G_EXPO_N, G_PNL_REAL
+
+**Detaillierte Dokumentation:** Siehe `Matching-Engine-Dokumentation.md`
+
+## Neu hinzugefügte Features (heute)
+
+### 1. Live-Marktpreise von EPEX Spot
+- **Datenquelle:** EPEX Spot Day-Ahead Preise (Österreich)
+- **Provider:** ENTSO-E Transparency Platform
+- **API-Integration:** XML-Parsing mit automatischer Umwandlung
+- **Zeitauflösung:** PT15M und PT60M
+- **Update-Intervall:** Alle 5 Minuten (konfigurierbar)
+
+### 2. Automatische Matching-Engine
+- **Vollautomatische Order-Ausführung**
+- **Orderbuch-Matching** mit fairem Preis
+- **Teilausführungen** unterstützt
+- **Echtzeit-Trade-Generierung**
+
+### 3. Enhanced Dashboard Features
+- **Flash Messages** für Benutzer-Feedback
+- **Order-Management** mit Status-Anzeige
+- **Trade-Historie** mit Zeitstempeln
+- **Einheiten-Anzeige** (EUR/MWh) in Charts
+- **VWAP-Beschreibung** ("Volume-Weighted Average Price")
+- **Marktdaten-Quelle** Anzeige (EPEX Spot)
+
+### 4. API-Endpunkte
+- **GET /orders:** Alle Orders abrufen
+- **GET /trades:** Alle Trades abrufen
+- **POST /order:** Order über Form erstellen
+- **GET /market/prices:** Marktpreise abrufen
+
+### 5. Datenbank-Erweiterungen
+- **Orders-Tabelle:** Order-Status-Tracking
+- **Trades-Tabelle:** Trade-Historie
+- **Filled-Feld:** Teilausführungen verfolgen
+
 ## Roadmap
 
 ### Geplante Features
-- **WebSocket-Integration** für Real-time-Updates
+- **WebSocket-Integration** für Real-time-Updates ✅ (bereits implementiert)
 - **Erweiterte Chart-Analyse** mit technischen Indikatoren
 - **Mobile App** für BESS-Monitoring
 - **Machine Learning** für Preisvorhersagen
