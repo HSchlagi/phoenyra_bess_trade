@@ -6,8 +6,27 @@ import requests
 import asyncio
 from datetime import datetime, timedelta
 import os
+import sys
 from typing import Optional, List, Dict
 from xml.etree import ElementTree as ET
+
+# Configuration - use environment variables with fallbacks
+ENTSO_E_API_TOKEN = os.getenv("ENTSO_E_TOKEN", "2793353d-b5dd-4d4f-9638-8e26c88027e5")
+ENTSO_E_BASE_URL = "https://web-api.tp.entsoe.eu/api"
+BIDDING_ZONES = {
+    "AT": "10YAT-APG------L",      # Österreich
+    "DE": "10Y1001A1001A83F",      # Deutschland  
+    "CH": "10YCH-SWISSGRIDZ",      # Schweiz
+    "IT": "10YIT-GRTN-----B",      # Italien
+    "CZ": "10YCZ-CEPS-----N",      # Tschechien
+    "SK": "10YSK-SEPS-----K",      # Slowakei
+    "HU": "10YHU-MAVIR----U",      # Ungarn
+    "SI": "10YSI-ELES-----O"       # Slowenien
+}
+DEFAULT_MARKET = "epex_at"
+DEFAULT_BIDDING_ZONE = "AT"
+MARKET_UPDATE_INTERVAL = 300
+ENTSO_E_REQUEST_DELAY = 1.0
 
 class MarketFeed:
     """Service to fetch and push market prices from various energy APIs"""
@@ -15,9 +34,9 @@ class MarketFeed:
     def __init__(self, exchange_url: str = "http://exchange:9000"):
         self.exchange_url = exchange_url
         self.awattar_base = "https://api.awattar.de/v1"
-        self.entso_e_base = "https://web-api.tp.entsoe.eu/api"
-        # ENTSO-E API token (set via environment variable)
-        self.entso_token = os.getenv("ENTSO_E_TOKEN", "")
+        self.entso_e_base = ENTSO_E_BASE_URL
+        # ENTSO-E API token from config
+        self.entso_token = ENTSO_E_API_TOKEN
         
     def fetch_awattar(self, region: str = "AT") -> Optional[Dict]:
         """Fetch current electricity prices from aWattar
@@ -79,14 +98,8 @@ class MarketFeed:
                 print("ENTSO-E API token not configured, using aWattar fallback")
                 return None
             
-            # Document type: A44 (Day-ahead prices), Process type: A01 (Day ahead)
-            # Bidding zone codes: AT=10YAT-APG------L, DE=10YDE-RWENET---I
-            bidding_zones = {
-                "AT": "10YAT-APG------L",
-                "DE": "10YDE-RWENET---I"
-            }
-            
-            zone_code = bidding_zones.get(bidding_zone, bidding_zones["AT"])
+            # Use bidding zones from config
+            zone_code = BIDDING_ZONES.get(bidding_zone, BIDDING_ZONES["AT"])
             now = datetime.now()
             start_date = now.strftime("%Y%m%d0000")
             end_date = now.strftime("%Y%m%d2359")
@@ -99,6 +112,9 @@ class MarketFeed:
                 "periodStart": start_date,
                 "periodEnd": end_date
             }
+            
+            # Rate limiting
+            await asyncio.sleep(ENTSO_E_REQUEST_DELAY)
             
             response = requests.get(self.entso_e_base, params=params, timeout=15)
             response.raise_for_status()
@@ -192,7 +208,7 @@ class MarketFeed:
             print(f"Error pushing price to exchange: {e}")
             return False
     
-    async def run_feed(self, market: str = "epex_at", interval: int = 300, bidding_zone: str = "AT"):
+    async def run_feed(self, market: str = DEFAULT_MARKET, interval: int = MARKET_UPDATE_INTERVAL, bidding_zone: str = DEFAULT_BIDDING_ZONE):
         """Run continuous market feed
         
         Args:
@@ -235,9 +251,15 @@ class MarketFeed:
 def main():
     """Main entry point for the market feed service"""
     exchange_url = os.getenv("EXCHANGE_URL", "http://exchange:9000")
-    market = os.getenv("MARKET", "epex_at")
-    interval = int(os.getenv("UPDATE_INTERVAL", "300"))
-    bidding_zone = os.getenv("BIDDING_ZONE", "AT")
+    market = os.getenv("MARKET", DEFAULT_MARKET)
+    interval = int(os.getenv("UPDATE_INTERVAL", str(MARKET_UPDATE_INTERVAL)))
+    bidding_zone = os.getenv("BIDDING_ZONE", DEFAULT_BIDDING_ZONE)
+    
+    print(f"🚀 Starting Market Feed Service")
+    print(f"   Market: {market}")
+    print(f"   Bidding Zone: {bidding_zone}")
+    print(f"   Update Interval: {interval}s")
+    print(f"   ENTSO-E Token: {ENTSO_E_API_TOKEN[:8]}...")
     
     feed = MarketFeed(exchange_url)
     asyncio.run(feed.run_feed(market, interval, bidding_zone))
