@@ -28,7 +28,6 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 ### 1. Dashboard-Interface
 - **Moderne Dark-Mode-Oberfläche** mit Gold-Standard-Design
 - **Responsive Design** für Desktop und Mobile
-- **Theme-Toggle** zwischen Dark und Light Mode
 - **Live-Status-Anzeige** der Systemverbindung
 - **Echtzeit-Uhr** in der Navigation
 

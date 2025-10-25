@@ -63,19 +63,6 @@
             transform: translateY(-2px);
         }
         
-        /* Light Mode Cards */
-        .light-card {
-            position: relative;
-            background: rgba(255, 255, 255, 0.95);
-            border: 1px solid rgba(229, 231, 235, 0.8);
-            border-radius: 16px;
-            transition: all 0.3s ease;
-        }
-        
-        .light-card:hover {
-            border-color: rgba(156, 163, 175, 0.8);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
         
         /* Magic Card Hover Effect */
         .magic-card {
@@ -129,9 +116,12 @@
             animation: aurora 4s ease-in-out infinite;
         }
         
+        
         @keyframes aurora {
             0%, 100% { background-position: 0% 50%; }
+            25% { background-position: 50% 0%; }
             50% { background-position: 100% 50%; }
+            75% { background-position: 50% 100%; }
         }
         
         /* Number Ticker Animation */
@@ -230,6 +220,7 @@
             pointer-events: none;
         }
         
+        
         /* Gold Footer */
         .gold-footer {
             background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
@@ -250,9 +241,10 @@
                 rgba(255, 215, 0, 0.05) 100%);
             pointer-events: none;
         }
+        
     </style>
 </head>
-<body class="bg-gray-900 min-h-screen gold-bg">
+<body class="bg-gray-900 min-h-screen gold-bg" data-theme="dark">
 
     <!-- Navigation -->
     <nav class="gradient-bg shadow-lg relative z-10">
@@ -284,10 +276,6 @@
                 </div>
                 <div class="flex items-center">
                     <div class="flex items-center space-x-4">
-                        <!-- Theme Toggle -->
-                        <button id="theme-toggle" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
-                            <i class="fas fa-moon" id="theme-icon"></i>
-                        </button>
                         <span class="text-white text-sm" id="connection-status">
                             <span class="status-indicator status-offline"></span>
                             Verbindung wird hergestellt...
@@ -349,45 +337,9 @@
         updateDateTime();
         setInterval(updateDateTime, 1000);
         
-        // Theme Toggle
-        const themeToggle = document.getElementById('theme-toggle');
-        const themeIcon = document.getElementById('theme-icon');
+        // Dark Mode Only - No Theme Toggle
         const body = document.body;
-        
-        // Check for saved theme preference or default to 'dark'
-        const currentTheme = localStorage.getItem('theme') || 'dark';
-        body.setAttribute('data-theme', currentTheme);
-        
-        themeToggle.addEventListener('click', function() {
-            const currentTheme = body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            
-            // Update icon
-            if (newTheme === 'dark') {
-                themeIcon.className = 'fas fa-moon';
-            } else {
-                themeIcon.className = 'fas fa-sun';
-            }
-            
-            // Update card classes
-            updateCardClasses(newTheme);
-        });
-        
-        function updateCardClasses(theme) {
-            const cards = document.querySelectorAll('.dark-card, .light-card');
-            cards.forEach(card => {
-                card.className = card.className.replace(/dark-card|light-card/g, theme + '-card');
-            });
-        }
-        
-        // Initialize theme on page load
-        if (body.getAttribute('data-theme') === 'light') {
-            themeIcon.className = 'fas fa-sun';
-            updateCardClasses('light');
-        }
+        body.setAttribute('data-theme', 'dark');
     </script>
 
     {% block scripts %}{% endblock %}
