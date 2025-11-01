@@ -6,24 +6,48 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 
 ## ✨ Features
 
+### Core Trading System
 - **🎨 Moderne Web-Oberfläche** mit Flask + Tailwind CSS
 - **🔮 Magic UI Komponenten** (Aurora Text, Neon Cards, Shimmer Buttons)
 - **📊 Professionelle Charts** mit ApexCharts
 - **🔋 BESS-Status-Monitoring** (SoC, Leistung, Temperatur)
 - **💹 Trading-Funktionen** (Orders, Trades, Marktpreise)
-- **🌙 Theme-Toggle** (Dark/Light Mode)
+- **⚙️ Automatische Matching-Engine** für sofortige Order-Ausführung
+- **🌐 ENTSO-E/EPEX Spot Integration** für Live-Marktpreise
 - **📱 Responsive Design** für alle Bildschirmgrößen
 - **🐳 Docker-Containerisierung** mit Live-Reload
 - **⚡ Real-time Updates** mit WebSocket
 
+### ETRM Services (Enterprise Trading & Risk Management)
+- **🔮 Forecast API**: Day-Ahead & Intraday Preisprognosen
+- **🛡️ Risk API**: VaR-Berechnung (Value at Risk) und Risk Limits
+- **⚡ Grid API**: Netzfrequenz-Monitoring und Grid-Constraints
+- **💳 Credit API**: Counterparty Exposure Management
+- **💰 Billing API**: Automatische Rechnungserstellung mit PDF-Export
+
+### Dashboards
+- **📊 Haupt-Dashboard**: Trading, BESS Status, Marktdaten
+- **🔮 Forecast Dashboard**: Interaktive Prognose-Charts
+- **📈 Risk Dashboard**: VaR-Verlauf & Limit-Überwachung
+- **🔌 Grid Dashboard**: Live-Netzfrequenz & Constraints
+- **💳 Credit Dashboard**: Exposure-Tracking & Limits
+- **💰 Billing Dashboard**: Invoice-Verwaltung
+
 ## 🏗️ Architektur
 
 ### Backend-Services
-- **Exchange Service** (FastAPI): Kern-Trading-Engine
+- **Exchange Service** (FastAPI): Kern-Trading-Engine (Port 9000)
+- **Market Feed Service**: Live-Marktpreise von ENTSO-E/EPEX Spot
+- **BESS Telemetry Service**: Automatische Telemetrie (Modbus TCP, MQTT, REST)
+- **Forecast API** (FastAPI): Day-Ahead & Intraday Prognosen (Port 9500)
+- **Risk API** (FastAPI): VaR-Berechnung und Risk Limits (Port 9502)
+- **Grid API** (FastAPI): Netzfrequenz & Grid-Constraints (Port 9501)
+- **Credit API** (FastAPI): Counterparty Exposure Management (Port 9503)
+- **Billing API** (FastAPI): Rechnungserstellung & PDF-Export (Port 9504)
 - **Redis**: In-Memory-Datenbank für Caching
-- **Prometheus**: Metriken-Sammlung und Monitoring
-- **Grafana**: Visualisierung und Alerting
-- **Webapp Service** (Flask): Web-Dashboard
+- **Prometheus**: Metriken-Sammlung und Monitoring (Port 9090)
+- **Grafana**: Visualisierung und Alerting (Port 3000)
+- **Webapp Service** (Flask): Web-Dashboard (Port 5000)
 
 ### Frontend-Technologien
 - **Flask**: Python Web Framework
@@ -53,26 +77,74 @@ docker compose ps
 ```
 
 ### Zugriff auf Services
-- **🌐 Web-Dashboard**: http://localhost:5000
-- **🔌 Exchange API**: http://localhost:9000
-- **📈 Grafana**: http://localhost:3000
+
+#### Web-Dashboards
+- **🌐 Haupt-Dashboard**: http://localhost:5000
+- **🔮 Forecast**: http://localhost:5000/forecast
+- **📈 Risk**: http://localhost:5000/risk
+- **🔌 Grid**: http://localhost:5000/grid
+- **💳 Credit**: http://localhost:5000/credit
+- **💰 Billing**: http://localhost:5000/billing
+- **⚙️ Konfiguration**: http://localhost:5000/config
+
+#### API-Dokumentation
+- **🔌 Exchange API**: http://localhost:9000/docs
+- **🔮 Forecast API**: http://localhost:9500/docs
+- **⚡ Grid API**: http://localhost:9501/docs
+- **🛡️ Risk API**: http://localhost:9502/docs
+- **💳 Credit API**: http://localhost:9503/docs
+- **💰 Billing API**: http://localhost:9504/docs
+
+#### Monitoring
+- **📈 Grafana**: http://localhost:3000 (admin/admin)
 - **📊 Prometheus**: http://localhost:9090
 
 ## 📋 Verwendung
 
-### Dashboard
-Das Web-Dashboard bietet eine intuitive Benutzeroberfläche für:
+### Dashboards
+
+#### Haupt-Dashboard
 - **BESS-Status-Monitoring** in Echtzeit
 - **Trading-Operations** mit Order-Management
 - **Marktpreise-Visualisierung** mit professionellen Charts
-- **Theme-Switching** zwischen Dark und Light Mode
+- **Automatische Order-Ausführung** via Matching-Engine
+
+#### ETRM-Dashboards
+- **Forecast Dashboard**: Preis-, Last-, Solar- und Windprognosen mit SOC-Optimierung
+- **Risk Dashboard**: VaR-Verlauf, Risk Limits, Expected Shortfall
+- **Grid Dashboard**: Live-Netzfrequenz, Tie-Line Flows, Grid-Constraints
+- **Credit Dashboard**: Counterparty Exposure Tracking und Limit-Management
+- **Billing Dashboard**: Invoice-Generierung, PDF-Download, Statistiken
 
 ### API-Endpunkte
+
+#### Trading & Exchange
 - `GET /api/bess-status` - BESS-Status abrufen
 - `GET /api/market-data` - Marktdaten abrufen
 - `GET /api/orders` - Aktive Orders abrufen
 - `POST /api/orders` - Neue Order erstellen
 - `POST /api/telemetry` - BESS-Telemetrie senden
+
+#### Forecast
+- `POST /api/forecast/dayahead` - Day-Ahead Forecast anfordern
+- `POST /api/forecast/intraday` - Intraday Forecast anfordern
+- `GET /api/forecast/status/{job_id}` - Forecast Job-Status
+
+#### Risk
+- `POST /api/risk/var` - VaR berechnen
+- `GET /api/risk/limits` - Risk Limits abrufen
+
+#### Grid
+- `GET /api/grid/state` - Grid-Zustand abrufen
+- `GET /api/grid/constraints` - Grid-Constraints abrufen
+
+#### Credit
+- `GET /api/credit/exposure` - Counterparty Exposure abrufen
+- `POST /api/credit/limit` - Credit Limit setzen
+
+#### Billing
+- `POST /api/billing/generate` - Rechnung generieren
+- `GET /api/billing/invoice/{id}` - Invoice PDF herunterladen
 
 ## 🔧 Entwicklung
 
@@ -86,27 +158,61 @@ FLASK_ENV=development
 
 ### Code-Struktur
 ```
-webapp/
-├── app.py              # Flask Hauptanwendung
-├── templates/
-│   ├── base.html       # Basis-Template
-│   └── dashboard.html  # Dashboard-Template
-├── static/
-│   └── phoenyra_logo.png
-└── Dockerfile
+phoenyra_BESS_Trade/
+├── webapp/                    # Flask Web-Dashboard
+│   ├── app.py                 # Hauptanwendung
+│   ├── templates/
+│   │   ├── base.html          # Basis-Template mit Navigation
+│   │   ├── dashboard.html      # Haupt-Dashboard
+│   │   ├── forecast.html       # Forecast Dashboard
+│   │   ├── risk.html          # Risk Dashboard
+│   │   ├── grid.html          # Grid Dashboard
+│   │   ├── credit.html        # Credit Dashboard
+│   │   ├── billing.html       # Billing Dashboard
+│   │   └── config.html        # BESS-Konfiguration
+│   └── static/
+│       └── phoenyra_logo.png
+├── exchange/                  # Trading-Engine
+│   ├── server.py              # FastAPI Backend
+│   ├── market_feed.py         # ENTSO-E Integration
+│   └── bess_telemetry.py      # Telemetrie-Service
+├── NEU/                       # ETRM Services
+│   ├── forecast/              # Forecast API
+│   ├── grid/                  # Grid API
+│   ├── risk/                  # Risk API
+│   ├── credit/                # Credit API
+│   └── billing/               # Billing API
+├── prometheus/
+│   └── prometheus.yml         # Monitoring-Konfiguration
+├── grafana/
+│   └── provisioning/          # Grafana Dashboards
+├── docker-compose.yml         # Alle Services
+└── Dokumentation_BESS_Trade.md # Vollständige Dokumentation
 ```
 
 ## 📊 Monitoring
 
 ### Prometheus Metriken
+
+#### Core Trading
 - **BESS-Status**: SoC, Leistung, Temperatur
 - **Trading-Metriken**: Orders, Trades, Volumen
 - **System-Performance**: API-Response-Zeiten
 
+#### ETRM Services
+- **Forecast**: `pho_forecast_jobs_total`, `pho_forecast_price_eur_mwh`, `pho_forecast_load_mw`
+- **Risk**: `pho_risk_var_99_eur`, `pho_risk_limit_utilization_pct`
+- **Grid**: `pho_grid_freq_hz`, `pho_grid_load_mw`
+- **Credit**: `pho_credit_exposure_eur` (pro Counterparty)
+- **Billing**: `pho_bo_invoices_total`
+
 ### Grafana Dashboards
 - **BESS-Überwachung**: SoC, Leistung, Temperatur-Trends
 - **Trading-Analytics**: Order-Volumen, PnL, Marktpreise
-- **System-Health**: API-Status, Response-Zeiten
+- **ETRM Services Monitoring**: Forecast, Risk, Grid Metriken
+- **System-Health**: API-Status, Response-Zeiten aller Services
+
+**📖 Detaillierte Prometheus-Anleitung**: Siehe [PROMETHEUS_GUIDE.md](PROMETHEUS_GUIDE.md)
 
 ## 🔒 Sicherheit
 
@@ -118,8 +224,10 @@ webapp/
 ## 📚 Dokumentation
 
 Vollständige Dokumentation finden Sie in:
-- [Dokumentation_BESS_Trade.md](Dokumentation_BESS_Trade.md)
-- [Phoenyra_BESS_Trading_Final_Documentation_v2.md](Phoenyra_BESS_Trading_Final_Documentation_v2.md)
+- **[Dokumentation_BESS_Trade.md](Dokumentation_BESS_Trade.md)** - Vollständige System-Dokumentation (v3.0)
+- **[Summary_BESS_Trade.md](Summary_BESS_Trade.md)** - Zusammenfassung der ETRM-Integration
+- **[PROMETHEUS_GUIDE.md](PROMETHEUS_GUIDE.md)** - Prometheus Queries & Metriken
+- **[Phoenyra_BESS_Trading_Final_Documentation_v2.md](Phoenyra_BESS_Trading_Final_Documentation_v2.md)** - Legacy Dokumentation v2.0
 
 ## 🤝 Beitragen
 
@@ -139,6 +247,24 @@ Bei Fragen oder Problemen:
 - Erstelle ein [Issue](https://github.com/HSchlagi/phoenyra_bess_trade/issues)
 - Kontaktiere uns unter: office@instanet.at
 
+## 🆕 Was ist neu? (v3.0 - 01.11.2025)
+
+### ETRM Services Integration
+- ✅ **5 neue Enterprise Services** integriert (Forecast, Risk, Grid, Credit, Billing)
+- ✅ **5 neue Dashboards** mit interaktiven Charts
+- ✅ **Prometheus-Monitoring** für alle Services
+- ✅ **Active Menu Highlighting** für bessere UX
+- ✅ **Navigation optimiert** und bereinigt
+
+### Highlights
+- 🔮 **Forecast**: Automatische Preis- und Lastprognosen für optimales Trading
+- 🛡️ **Risk**: VaR-Berechnung und Risk-Limit-Überwachung
+- ⚡ **Grid**: Echtzeit-Netzfrequenz-Monitoring mit Constraint-Alerts
+- 💳 **Credit**: Counterparty Exposure Management
+- 💰 **Billing**: Automatische Invoice-Generierung
+
+**Vollständige Changelog**: Siehe [Summary_BESS_Trade.md](Summary_BESS_Trade.md)
+
 ---
 
-**Phoenyra BESS Trade System v2.0** - Moderne Trading-Lösung für Battery Energy Storage Systems
+**Phoenyra BESS Trade System v3.0 (ULTRA OMEGA+)** - Enterprise Trading & Risk Management für Battery Energy Storage Systems
