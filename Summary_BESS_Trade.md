@@ -15,7 +15,9 @@ Das System ermöglicht vollautomatisches Trading von Batteriespeichern basierend
 
 ---
 
-## 🚀 Integration NEU-Services (01.11.2025)
+## 🚀 Integration ETRM-Services (01.11.2025)
+
+**Hinweis**: Die Services wurden zunächst im `NEU/` Ordner eingeführt und anschließend in den strukturierten `etrm/` Ordner (Enterprise Trading & Risk Management) umbenannt.
 
 ### Phase 1: Priorität HOCH (Forecast, Risk, Grid)
 

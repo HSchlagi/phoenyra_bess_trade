@@ -229,7 +229,7 @@ exchange/
 ├── config.py              # Zentrale Konfiguration
 └── requirements.txt       # Python Dependencies
 
-NEU/
+etrm/
 ├── forecast/
 │   ├── main.py            # Forecast API
 │   ├── requirements.txt   # Dependencies
@@ -246,10 +246,23 @@ NEU/
 │   ├── main.py            # Credit API
 │   ├── requirements.txt
 │   └── Dockerfile
-└── billing/
-    ├── main.py            # Billing API
-    ├── requirements.txt
-    └── Dockerfile
+├── billing/
+│   ├── main.py            # Billing API
+│   ├── requirements.txt
+│   └── Dockerfile
+├── openapi/               # OpenAPI Spezifikationen
+│   ├── forecast.yaml
+│   ├── grid.yaml
+│   ├── risk.yaml
+│   ├── credit.yaml
+│   └── billing.yaml
+├── grafana_dashboards/     # Grafana Dashboard Templates
+│   ├── forecast_vs_actual.json
+│   ├── risk_var_limits.json
+│   └── backoffice_kpis.json
+└── n8n_workflows/         # n8n Automation Workflows
+    ├── wf_entsoe_forecast_strategy_order.json
+    └── wf_grid_constraints_policy_reload.json
 
 prometheus/
 └── prometheus.yml         # Prometheus-Konfiguration für alle Services

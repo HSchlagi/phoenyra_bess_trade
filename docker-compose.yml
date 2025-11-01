@@ -101,37 +101,37 @@ services:
     depends_on:
       - prometheus
 
-  # === NEU: Advanced ETRM Services ===
+  # === ETRM Services (Enterprise Trading & Risk Management) ===
   forecast:
-    build: ./NEU/forecast
+    build: ./etrm/forecast
     container_name: forecast
     ports:
       - "9500:9500"
     restart: unless-stopped
 
   grid:
-    build: ./NEU/grid
+    build: ./etrm/grid
     container_name: grid
     ports:
       - "9501:9501"
     restart: unless-stopped
 
   risk:
-    build: ./NEU/risk
+    build: ./etrm/risk
     container_name: risk
     ports:
       - "9502:9502"
     restart: unless-stopped
 
   credit:
-    build: ./NEU/credit
+    build: ./etrm/credit
     container_name: credit
     ports:
       - "9503:9503"
     restart: unless-stopped
 
   billing:
-    build: ./NEU/billing
+    build: ./etrm/billing
     container_name: billing
     ports:
       - "9504:9504"

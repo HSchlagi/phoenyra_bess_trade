@@ -176,12 +176,15 @@ phoenyra_BESS_Trade/
 │   ├── server.py              # FastAPI Backend
 │   ├── market_feed.py         # ENTSO-E Integration
 │   └── bess_telemetry.py      # Telemetrie-Service
-├── NEU/                       # ETRM Services
+├── etrm/                      # ETRM Services (Enterprise Trading & Risk Management)
 │   ├── forecast/              # Forecast API
 │   ├── grid/                  # Grid API
 │   ├── risk/                  # Risk API
 │   ├── credit/                # Credit API
-│   └── billing/               # Billing API
+│   ├── billing/               # Billing API
+│   ├── openapi/               # OpenAPI Spezifikationen
+│   ├── grafana_dashboards/    # Grafana Dashboard JSONs
+│   └── n8n_workflows/         # n8n Workflow-Definitionen
 ├── prometheus/
 │   └── prometheus.yml         # Monitoring-Konfiguration
 ├── grafana/
