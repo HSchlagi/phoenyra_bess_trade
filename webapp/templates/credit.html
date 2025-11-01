@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Credit Management - Phoenyra BESS Trade{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-white mb-2">
+            <i class="fas fa-wallet mr-2"></i>Credit Management Dashboard
+        </h2>
+        <p class="text-gray-300">Counterparty Exposure Tracking und Credit Limit Management</p>
+    </div>
+
+    <!-- Counterparty Selection -->
+    <div class="dark-card p-6 mb-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+            <i class="fas fa-building mr-2 text-blue-400"></i>Counterparty auswählen
+        </h3>
+        <div class="flex items-center space-x-4">
+            <input type="text" id="counterparty-select" value="CP-A" placeholder="Counterparty ID" 
+                   class="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+            <button onclick="loadExposure()" class="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-2 px-6 rounded-lg transition-all duration-300">
+                <i class="fas fa-search mr-2"></i>Laden
+            </button>
+            <button onclick="addNewCounterparty()" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300">
+                <i class="fas fa-plus mr-2"></i>Neu
+            </button>
+        </div>
+    </div>
+
+    <!-- Exposure Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <!-- Current Exposure -->
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-1">Aktuelles Exposure</p>
+                    <p class="text-3xl font-bold text-red-400 number-ticker" id="exposure-value">-</p>
+                    <p class="text-sm text-gray-400 mt-1">EUR</p>
+                </div>
+                <div class="w-16 h-16 bg-red-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-exclamation-circle text-3xl text-red-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Credit Limit -->
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-1">Credit Limit</p>
+                    <p class="text-3xl font-bold text-yellow-400 number-ticker" id="limit-value">-</p>
+                    <p class="text-sm text-gray-400 mt-1">EUR</p>
+                </div>
+                <div class="w-16 h-16 bg-yellow-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-chart-line text-3xl text-yellow-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Utilization -->
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-1">Auslastung</p>
+                    <p class="text-3xl font-bold number-ticker" id="utilization-value">-</p>
+                    <p class="text-sm text-gray-400 mt-1">%</p>
+                </div>
+                <div class="w-16 h-16 bg-green-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-percentage text-3xl" id="utilization-icon" style="color: #10b981;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Credit Limit Management -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Set Credit Limit -->
+        <div class="dark-card p-6">
+            <h3 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-edit mr-2 text-green-400"></i>Credit Limit setzen
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Counterparty</label>
+                    <input type="text" id="limit-counterparty" value="CP-A" 
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-green-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Credit Limit (EUR)</label>
+                    <input type="number" id="limit-amount" value="100000" step="1000" min="0"
+                           class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-green-500">
+                </div>
+                <button onclick="setCreditLimit()" class="w-full bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg">
+                    <i class="fas fa-save mr-2"></i>Limit speichern
+                </button>
+            </div>
+        </div>
+
+        <!-- Exposure Chart -->
+        <div class="dark-card p-6">
+            <h3 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-chart-area mr-2 text-purple-400"></i>Exposure-Verlauf
+            </h3>
+            <div id="exposure-chart"></div>
+        </div>
+    </div>
+
+    <!-- Counterparty List -->
+    <div class="dark-card p-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+            <i class="fas fa-list mr-2 text-cyan-400"></i>Alle Counterparties
+        </h3>
+        <div id="counterparty-list" class="space-y-3">
+            <!-- Dynamically populated -->
+            <div class="flex items-center justify-between p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-building text-blue-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-white font-medium">CP-A</p>
+                        <p class="text-sm text-gray-400">Loading...</p>
+                    </div>
+                </div>
+                <button onclick="selectCounterparty('CP-A')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">
+                    <i class="fas fa-eye mr-2"></i>Anzeigen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="credit-status" class="mt-6 hidden">
+        <div class="dark-card p-4 bg-blue-900 bg-opacity-50 border-blue-500">
+            <p class="text-blue-300"><i class="fas fa-info-circle mr-2"></i><span id="status-message"></span></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let exposureChart;
+let exposureHistory = [];
+const counterparties = ['CP-A', 'CP-B', 'CP-C', 'CP-D']; // Demo counterparties
+
+// Initialize chart
+function initExposureChart() {
+    const options = {
+        chart: {
+            type: 'area',
+            height: 250,
+            background: 'transparent',
+            foreColor: '#fff',
+            toolbar: { show: false }
+        },
+        theme: { mode: 'dark' },
+        series: [{
+            name: 'Exposure',
+            data: []
+        }],
+        colors: ['#ef4444'],
+        stroke: { curve: 'smooth', width: 3 },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.3,
+                opacityTo: 0.1
+            }
+        },
+        grid: { borderColor: '#374151' },
+        xaxis: { type: 'datetime' },
+        yaxis: {
+            title: { text: 'EUR' },
+            labels: {
+                formatter: (val) => val >= 1000 ? (val / 1000).toFixed(0) + 'k' : val.toFixed(0)
+            }
+        },
+        tooltip: {
+            theme: 'dark',
+            y: {
+                formatter: (val) => val.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })
+            }
+        }
+    };
+
+    exposureChart = new ApexCharts(document.querySelector("#exposure-chart"), options);
+    exposureChart.render();
+}
+
+function showStatus(message, type = 'info') {
+    const statusDiv = document.getElementById('credit-status');
+    const statusMsg = document.getElementById('status-message');
+    statusDiv.classList.remove('hidden');
+    statusMsg.textContent = message;
+}
+
+async function loadExposure() {
+    const cp = document.getElementById('counterparty-select').value;
+    
+    try {
+        const response = await fetch(`/api/credit/exposure?counterparty=${cp}`);
+        const data = await response.json();
+        
+        if (data) {
+            document.getElementById('exposure-value').textContent = 
+                data.exposure_eur.toLocaleString('de-DE', { maximumFractionDigits: 0 });
+            document.getElementById('limit-value').textContent = 
+                (data.exposure_eur / (data.utilization_pct / 100) || 1).toLocaleString('de-DE', { maximumFractionDigits: 0 });
+            
+            const utilization = parseFloat(data.utilization_pct);
+            const utilElem = document.getElementById('utilization-value');
+            const utilIcon = document.getElementById('utilization-icon');
+            
+            utilElem.textContent = utilization.toFixed(1);
+            
+            if (utilization > 90) {
+                utilElem.style.color = '#ef4444';
+                utilIcon.style.color = '#ef4444';
+            } else if (utilization > 75) {
+                utilElem.style.color = '#f59e0b';
+                utilIcon.style.color = '#f59e0b';
+            } else {
+                utilElem.style.color = '#10b981';
+                utilIcon.style.color = '#10b981';
+            }
+            
+            // Update chart
+            const now = new Date().getTime();
+            exposureHistory.push({ x: now, y: data.exposure_eur });
+            if (exposureHistory.length > 20) exposureHistory.shift();
+            exposureChart.updateSeries([{ name: 'Exposure', data: exposureHistory }]);
+            
+            showStatus(`Exposure für ${cp} geladen`);
+        }
+    } catch (error) {
+        showStatus('Fehler: ' + error.message);
+    }
+}
+
+async function setCreditLimit() {
+    const cp = document.getElementById('limit-counterparty').value;
+    const limit = parseFloat(document.getElementById('limit-amount').value);
+    
+    try {
+        const response = await fetch('/api/credit/limit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ counterparty: cp, limit_eur: limit })
+        });
+        
+        const data = await response.json();
+        if (data.status === 'OK') {
+            showStatus(`Credit Limit für ${cp} auf ${limit.toLocaleString('de-DE')} EUR gesetzt`);
+            loadExposure();
+        }
+    } catch (error) {
+        showStatus('Fehler: ' + error.message);
+    }
+}
+
+function selectCounterparty(cp) {
+    document.getElementById('counterparty-select').value = cp;
+    document.getElementById('limit-counterparty').value = cp;
+    loadExposure();
+}
+
+function addNewCounterparty() {
+    const newCP = prompt('Counterparty ID eingeben:');
+    if (newCP) {
+        document.getElementById('counterparty-select').value = newCP;
+        document.getElementById('limit-counterparty').value = newCP;
+        showStatus(`Neue Counterparty ${newCP} hinzugefügt`);
+    }
+}
+
+function loadCounterpartyList() {
+    const container = document.getElementById('counterparty-list');
+    container.innerHTML = '';
+    
+    counterparties.forEach(cp => {
+        container.innerHTML += `
+            <div class="flex items-center justify-between p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-blue-500 bg-opacity-20 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas fa-building text-blue-400 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-white font-medium">${cp}</p>
+                        <p class="text-sm text-gray-400">Counterparty</p>
+                    </div>
+                </div>
+                <button onclick="selectCounterparty('${cp}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-300">
+                    <i class="fas fa-eye mr-2"></i>Anzeigen
+                </button>
+            </div>
+        `;
+    });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initExposureChart();
+    loadCounterpartyList();
+    loadExposure();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => loadExposure(), 30000);
+});
+</script>
+{% endblock %}
+

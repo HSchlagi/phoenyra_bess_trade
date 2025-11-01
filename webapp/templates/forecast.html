@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Forecast Dashboard - Phoenyra BESS Trade{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-white mb-2">
+            <i class="fas fa-crystal-ball mr-2"></i>Preis- und Lastprognosen
+        </h2>
+        <p class="text-gray-300">Day-Ahead und Intraday Forecasts für optimales BESS Trading</p>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Day-Ahead Forecast Request -->
+        <div class="dark-card p-6">
+            <h3 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-sun mr-2 text-yellow-400"></i>Day-Ahead Forecast
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Marktgebiet</label>
+                    <input type="text" id="da-area" value="AT" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Prognosehorizont (Stunden)</label>
+                    <input type="number" id="da-horizon" value="24" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-yellow-500">
+                </div>
+                <button onclick="requestDayAheadForecast()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg">
+                    <i class="fas fa-chart-line mr-2"></i>Forecast anfordern
+                </button>
+            </div>
+        </div>
+
+        <!-- Intraday Forecast Request -->
+        <div class="dark-card p-6">
+            <h3 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-clock mr-2 text-blue-400"></i>Intraday Forecast
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Marktgebiet</label>
+                    <input type="text" id="id-area" value="AT" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Prognosehorizont (Stunden)</label>
+                    <input type="number" id="id-horizon" value="12" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button onclick="requestIntradayForecast()" class="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 shadow-lg">
+                    <i class="fas fa-bolt mr-2"></i>Forecast anfordern
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Price Forecast Chart -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-euro-sign mr-2 text-green-400"></i>Strompreisprognose (EUR/MWh)
+            </h3>
+            <div id="price-chart"></div>
+        </div>
+
+        <!-- Load Forecast Chart -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-bolt mr-2 text-yellow-400"></i>Lastprognose (MW)
+            </h3>
+            <div id="load-chart"></div>
+        </div>
+    </div>
+
+    <!-- Generation Forecasts -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- Solar Forecast -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-sun mr-2 text-orange-400"></i>Solarprognose (MW)
+            </h3>
+            <div id="solar-chart"></div>
+        </div>
+
+        <!-- Wind Forecast -->
+        <div class="dark-card p-6">
+            <h3 class="text-lg font-bold text-white mb-4">
+                <i class="fas fa-wind mr-2 text-cyan-400"></i>Windprognose (MW)
+            </h3>
+            <div id="wind-chart"></div>
+        </div>
+    </div>
+
+    <!-- SOC Target -->
+    <div class="dark-card p-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+            <i class="fas fa-battery-three-quarters mr-2 text-blue-400"></i>Optimaler SOC-Zielverlauf (%)
+        </h3>
+        <div id="soc-chart"></div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="forecast-status" class="mt-6 hidden">
+        <div class="dark-card p-4 bg-blue-900 bg-opacity-50 border-blue-500">
+            <p class="text-blue-300"><i class="fas fa-info-circle mr-2"></i><span id="status-message"></span></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let priceChart, loadChart, solarChart, windChart, socChart;
+let currentJobId = null;
+
+// Initialize charts
+function initCharts() {
+    const chartOptions = {
+        chart: {
+            type: 'line',
+            height: 250,
+            background: 'transparent',
+            foreColor: '#fff',
+            toolbar: { show: false }
+        },
+        theme: { mode: 'dark' },
+        stroke: { curve: 'smooth', width: 3 },
+        grid: { borderColor: '#374151' },
+        xaxis: { type: 'datetime' },
+        tooltip: { theme: 'dark' }
+    };
+
+    priceChart = new ApexCharts(document.querySelector("#price-chart"), {
+        ...chartOptions,
+        colors: ['#10b981'],
+        series: [{ name: 'Preis', data: [] }],
+        yaxis: { title: { text: 'EUR/MWh' } }
+    });
+    priceChart.render();
+
+    loadChart = new ApexCharts(document.querySelector("#load-chart"), {
+        ...chartOptions,
+        colors: ['#f59e0b'],
+        series: [{ name: 'Last', data: [] }],
+        yaxis: { title: { text: 'MW' } }
+    });
+    loadChart.render();
+
+    solarChart = new ApexCharts(document.querySelector("#solar-chart"), {
+        ...chartOptions,
+        colors: ['#fb923c'],
+        series: [{ name: 'Solar', data: [] }],
+        yaxis: { title: { text: 'MW' } }
+    });
+    solarChart.render();
+
+    windChart = new ApexCharts(document.querySelector("#wind-chart"), {
+        ...chartOptions,
+        colors: ['#06b6d4'],
+        series: [{ name: 'Wind', data: [] }],
+        yaxis: { title: { text: 'MW' } }
+    });
+    windChart.render();
+
+    socChart = new ApexCharts(document.querySelector("#soc-chart"), {
+        ...chartOptions,
+        colors: ['#3b82f6'],
+        series: [{ name: 'SOC Ziel', data: [] }],
+        yaxis: { title: { text: '%' }, min: 0, max: 100 }
+    });
+    socChart.render();
+}
+
+function showStatus(message, type = 'info') {
+    const statusDiv = document.getElementById('forecast-status');
+    const statusMsg = document.getElementById('status-message');
+    statusDiv.classList.remove('hidden');
+    statusMsg.textContent = message;
+}
+
+async function requestDayAheadForecast() {
+    const area = document.getElementById('da-area').value;
+    const horizon = parseInt(document.getElementById('da-horizon').value);
+    
+    showStatus('Day-Ahead Forecast wird angefordert...');
+    
+    try {
+        const response = await fetch('/api/forecast/dayahead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ area, horizon_h: horizon, granularity_min: 15 })
+        });
+        
+        const data = await response.json();
+        if (data.job_id) {
+            currentJobId = data.job_id;
+            showStatus('Forecast Job gestartet: ' + data.job_id);
+            setTimeout(() => fetchForecastResults(data.job_id), 1000);
+        }
+    } catch (error) {
+        showStatus('Fehler: ' + error.message);
+    }
+}
+
+async function requestIntradayForecast() {
+    const area = document.getElementById('id-area').value;
+    const horizon = parseInt(document.getElementById('id-horizon').value);
+    
+    showStatus('Intraday Forecast wird angefordert...');
+    
+    try {
+        const response = await fetch('/api/forecast/intraday', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ area, horizon_h: horizon, granularity_min: 15 })
+        });
+        
+        const data = await response.json();
+        if (data.job_id) {
+            currentJobId = data.job_id;
+            showStatus('Forecast Job gestartet: ' + data.job_id);
+            setTimeout(() => fetchForecastResults(data.job_id), 1000);
+        }
+    } catch (error) {
+        showStatus('Fehler: ' + error.message);
+    }
+}
+
+async function fetchForecastResults(jobId) {
+    try {
+        const response = await fetch(`/api/forecast/status/${jobId}`);
+        const data = await response.json();
+        
+        if (data.status === 'done' && data.series) {
+            showStatus(`Forecast erfolgreich abgerufen (${data.series.length} Datenpunkte)`);
+            updateCharts(data.series);
+        } else {
+            showStatus('Forecast läuft noch...');
+            setTimeout(() => fetchForecastResults(jobId), 2000);
+        }
+    } catch (error) {
+        showStatus('Fehler beim Abrufen: ' + error.message);
+    }
+}
+
+function updateCharts(series) {
+    const priceData = series.map(d => ({ x: new Date(d.ts).getTime(), y: d.price_eur_mwh }));
+    const loadData = series.map(d => ({ x: new Date(d.ts).getTime(), y: d.load_mw }));
+    const solarData = series.map(d => ({ x: new Date(d.ts).getTime(), y: d.gen_solar_mw }));
+    const windData = series.map(d => ({ x: new Date(d.ts).getTime(), y: d.gen_wind_mw }));
+    const socData = series.map(d => ({ x: new Date(d.ts).getTime(), y: d.soc_target_pct }));
+    
+    priceChart.updateSeries([{ name: 'Preis', data: priceData }]);
+    loadChart.updateSeries([{ name: 'Last', data: loadData }]);
+    solarChart.updateSeries([{ name: 'Solar', data: solarData }]);
+    windChart.updateSeries([{ name: 'Wind', data: windData }]);
+    socChart.updateSeries([{ name: 'SOC Ziel', data: socData }]);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initCharts();
+    // Auto-request Day-Ahead forecast on load
+    setTimeout(() => requestDayAheadForecast(), 500);
+});
+</script>
+{% endblock %}
+

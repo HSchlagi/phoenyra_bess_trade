@@ -14,8 +14,13 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'phoenyra_dashboard_secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Exchange API Configuration
+# API Configuration
 EXCHANGE_BASE_URL = os.getenv('EXCHANGE_BASE_URL', 'http://exchange:9000')
+FORECAST_BASE_URL = os.getenv('FORECAST_BASE_URL', 'http://forecast:9500')
+GRID_BASE_URL = os.getenv('GRID_BASE_URL', 'http://grid:9501')
+RISK_BASE_URL = os.getenv('RISK_BASE_URL', 'http://risk:9502')
+CREDIT_BASE_URL = os.getenv('CREDIT_BASE_URL', 'http://credit:9503')
+BILLING_BASE_URL = os.getenv('BILLING_BASE_URL', 'http://billing:9504')
 API_KEY = os.getenv('API_KEY', 'demo')
 HMAC_SECRET = os.getenv('HMAC_SECRET', 'phoenyra_demo_secret')
 
@@ -226,6 +231,149 @@ def update_telemetry():
 def config_page():
     """BESS Telemetrie-Konfigurationsseite"""
     return render_template('config.html')
+
+# ---- Forecast Dashboard ----
+@app.route('/forecast')
+def forecast_page():
+    """Forecast Dashboard Seite"""
+    return render_template('forecast.html')
+
+@app.route('/api/forecast/dayahead', methods=['POST'])
+def request_dayahead_forecast():
+    """Request Day-Ahead Forecast"""
+    try:
+        data = request.get_json() or {}
+        response = requests.post(f"{FORECAST_BASE_URL}/forecast/dayahead", json=data, timeout=10)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/forecast/intraday', methods=['POST'])
+def request_intraday_forecast():
+    """Request Intraday Forecast"""
+    try:
+        data = request.get_json() or {}
+        response = requests.post(f"{FORECAST_BASE_URL}/forecast/intraday", json=data, timeout=10)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/forecast/status/<job_id>')
+def get_forecast_status(job_id):
+    """Get Forecast Job Status"""
+    try:
+        response = requests.get(f"{FORECAST_BASE_URL}/forecast/status/{job_id}", timeout=5)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---- Risk Dashboard ----
+@app.route('/risk')
+def risk_page():
+    """Risk Dashboard Seite"""
+    return render_template('risk.html')
+
+@app.route('/api/risk/var', methods=['POST'])
+def calculate_var():
+    """Calculate VaR"""
+    try:
+        data = request.get_json() or {}
+        response = requests.post(f"{RISK_BASE_URL}/risk/var", json=data, timeout=10)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/risk/limits')
+def get_risk_limits():
+    """Get Risk Limits"""
+    try:
+        response = requests.get(f"{RISK_BASE_URL}/risk/limits", timeout=5)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---- Grid Dashboard ----
+@app.route('/grid')
+def grid_page():
+    """Grid Dashboard Seite"""
+    return render_template('grid.html')
+
+@app.route('/api/grid/state')
+def get_grid_state():
+    """Get Grid State"""
+    try:
+        area = request.args.get('area', 'AT')
+        response = requests.get(f"{GRID_BASE_URL}/grid/state", params={"area": area}, timeout=5)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/grid/constraints')
+def get_grid_constraints():
+    """Get Grid Constraints"""
+    try:
+        window = request.args.get('window', 'PT1H')
+        response = requests.get(f"{GRID_BASE_URL}/grid/constraints", params={"window": window}, timeout=5)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---- Credit Dashboard ----
+@app.route('/credit')
+def credit_page():
+    """Credit Dashboard Seite"""
+    return render_template('credit.html')
+
+@app.route('/api/credit/exposure')
+def get_credit_exposure():
+    """Get Credit Exposure"""
+    try:
+        counterparty = request.args.get('counterparty', 'CP-A')
+        response = requests.get(f"{CREDIT_BASE_URL}/credit/exposure", params={"counterparty": counterparty}, timeout=5)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/credit/limit', methods=['POST'])
+def set_credit_limit():
+    """Set Credit Limit"""
+    try:
+        data = request.get_json() or {}
+        response = requests.post(f"{CREDIT_BASE_URL}/credit/limit", json=data, timeout=5)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---- Billing Dashboard ----
+@app.route('/billing')
+def billing_page():
+    """Billing Dashboard Seite"""
+    return render_template('billing.html')
+
+@app.route('/api/billing/generate', methods=['POST'])
+def generate_invoice():
+    """Generate Invoice"""
+    try:
+        period = request.args.get('period') or request.get_json().get('period') if request.is_json else '2025-10'
+        response = requests.post(f"{BILLING_BASE_URL}/billing/generate", params={"period": period}, timeout=10)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/billing/invoice/<invoice_id>')
+def get_invoice_pdf(invoice_id):
+    """Get Invoice PDF"""
+    try:
+        response = requests.get(f"{BILLING_BASE_URL}/billing/invoice/{invoice_id}", timeout=10)
+        return Response(
+            response.content,
+            mimetype='application/pdf',
+            headers={
+                'Content-Disposition': f'attachment; filename=invoice_{invoice_id}.pdf'
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/config/save', methods=['POST'])
 def save_config():

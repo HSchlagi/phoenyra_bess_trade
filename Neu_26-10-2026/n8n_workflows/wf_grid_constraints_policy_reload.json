@@ -1,0 +1,54 @@
+{
+  "name": "Grid Constraint \u2192 Tighten Policy (Reload)",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "http://localhost:9501/grid/constraints?window=PT1H"
+      },
+      "id": "grid",
+      "name": "HTTP Request (Grid)",
+      "type": "n8n-nodes-base.httpRequest"
+    },
+    {
+      "parameters": {
+        "functionCode": "const has = items[0].json.items && items[0].json.items.length>0; return has ? items : []; "
+      },
+      "id": "check",
+      "name": "Function (Constraints?)",
+      "type": "n8n-nodes-base.function"
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:9000/admin/policy/reload",
+        "options": {}
+      },
+      "id": "reload",
+      "name": "HTTP Request (Policy Reload)",
+      "type": "n8n-nodes-base.httpRequest"
+    }
+  ],
+  "connections": {
+    "HTTP Request (Grid)": {
+      "main": [
+        [
+          {
+            "node": "Function (Constraints?)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Function (Constraints?)": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request (Policy Reload)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

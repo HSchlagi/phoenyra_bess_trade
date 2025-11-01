@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Phoenyra Risk API
+  version: 0.1.0
+servers:
+  - url: http://localhost:9502
+paths:
+  /risk/var:
+    post:
+      summary: Monte-Carlo VaR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                horizon_d: { type: integer, example: 1 }
+                confidence: { type: number, example: 0.99 }
+                paths: { type: integer, example: 10000 }
+      responses:
+        "200":
+          description: VaR results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  var_eur: { type: number }
+                  es_eur: { type: number }
+  /risk/limits:
+    get:
+      summary: Portfolio/Desk/Trader risk limits
+      responses:
+        "200":
+          description: Limits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  portfolio:
+                    type: object
+                    additionalProperties: { type: number }

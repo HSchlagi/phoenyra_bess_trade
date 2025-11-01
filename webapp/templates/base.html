@@ -242,6 +242,13 @@
             pointer-events: none;
         }
         
+        /* Active Menu Item Styling */
+        .nav-link.bg-white {
+            background-color: rgba(255, 255, 255, 0.12) !important;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.6) !important;
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.15);
+        }
+        
     </style>
 </head>
 <body class="bg-gray-900 min-h-screen gold-bg" data-theme="dark">
@@ -259,17 +266,26 @@
                     </div>
                     <div class="hidden md:block">
                         <div class="ml-10 flex items-baseline space-x-4">
-                            <a href="/" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
+                            <a href="/" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/">
                                 <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
                             </a>
-                            <a href="/#trading" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
-                                <i class="fas fa-chart-line mr-1"></i>Trading
-                            </a>
-                            <a href="/#bess-status" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
-                                <i class="fas fa-battery-half mr-1"></i>BESS Status
-                            </a>
-                            <a href="/config" class="text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300">
+                            <a href="/config" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/config">
                                 <i class="fas fa-cog mr-1"></i>Konfiguration
+                            </a>
+                            <a href="/forecast" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/forecast">
+                                <i class="fas fa-crystal-ball mr-1"></i>Forecast
+                            </a>
+                            <a href="/risk" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/risk">
+                                <i class="fas fa-shield-alt mr-1"></i>Risk
+                            </a>
+                            <a href="/grid" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/grid">
+                                <i class="fas fa-plug mr-1"></i>Grid
+                            </a>
+                            <a href="/credit" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/credit">
+                                <i class="fas fa-wallet mr-1"></i>Credit
+                            </a>
+                            <a href="/billing" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/billing">
+                                <i class="fas fa-file-invoice-dollar mr-1"></i>Billing
                             </a>
                         </div>
                     </div>
@@ -280,8 +296,10 @@
                             <span class="status-indicator status-offline"></span>
                             Verbindung wird hergestellt...
                         </span>
-                        <span class="text-white text-sm" id="current-date"></span>
-                        <span class="text-white text-sm" id="current-time"></span>
+                        <div class="flex flex-col items-end">
+                            <span class="text-white text-xs" id="current-date"></span>
+                            <span class="text-white text-sm font-medium" id="current-time"></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -309,22 +327,93 @@
 
     <!-- Socket.IO Script -->
     <script>
-        const socket = io();
+        let socket;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 10;
         
-        socket.on('connect', function() {
-            document.getElementById('connection-status').innerHTML = 
-                '<span class="status-indicator status-online"></span>Verbunden';
-        });
+        function initSocket() {
+            socket = io({
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: maxReconnectAttempts,
+                reconnectionDelay: 1000,
+                timeout: 5000
+            });
+            
+            socket.on('connect', function() {
+                reconnectAttempts = 0;
+                const statusEl = document.getElementById('connection-status');
+                if (statusEl) {
+                    statusEl.innerHTML = 
+                        '<span class="status-indicator status-online"></span>Verbunden';
+                }
+                console.log('Socket.IO: Verbunden');
+            });
+            
+            socket.on('disconnect', function(reason) {
+                const statusEl = document.getElementById('connection-status');
+                if (statusEl) {
+                    statusEl.innerHTML = 
+                        '<span class="status-indicator status-offline"></span>Verbindung getrennt';
+                }
+                console.log('Socket.IO: Getrennt - Grund:', reason);
+                
+                // Versuche automatisch wiederzuverbinden
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    setTimeout(() => {
+                        reconnectAttempts++;
+                        if (statusEl) {
+                            statusEl.innerHTML = 
+                                '<span class="status-indicator status-warning"></span>Wiederherstellung...';
+                        }
+                        socket.connect();
+                    }, 2000);
+                }
+            });
+            
+            socket.on('connect_error', function(error) {
+                reconnectAttempts++;
+                const statusEl = document.getElementById('connection-status');
+                if (statusEl) {
+                    if (reconnectAttempts >= maxReconnectAttempts) {
+                        statusEl.innerHTML = 
+                            '<span class="status-indicator status-warning"></span>Offline (API verfügbar)';
+                    } else if (reconnectAttempts < 3) {
+                        statusEl.innerHTML = 
+                            '<span class="status-indicator status-warning"></span>Verbinden...';
+                    } else {
+                        // Nach 3 Versuchen: Zeige dass API funktioniert
+                        statusEl.innerHTML = 
+                            '<span class="status-indicator status-warning"></span>Offline (API verfügbar)';
+                    }
+                }
+                console.log('Socket.IO Verbindungsfehler:', error);
+            });
+            
+            socket.on('order_update', function(data) {
+                console.log('Order Update:', data);
+                // Handle order updates here
+            });
+            
+            // Set initial status
+            const statusEl = document.getElementById('connection-status');
+            if (statusEl && !socket.connected) {
+                statusEl.innerHTML = 
+                    '<span class="status-indicator status-warning"></span>Verbinden...';
+            }
+        }
         
-        socket.on('disconnect', function() {
-            document.getElementById('connection-status').innerHTML = 
-                '<span class="status-indicator status-offline"></span>Verbindung getrennt';
-        });
+        // Initialize socket connection
+        initSocket();
         
-        socket.on('order_update', function(data) {
-            console.log('Order Update:', data);
-            // Handle order updates here
-        });
+        // Fallback: Wenn nach 5 Sekunden keine Verbindung, zeige "API verfügbar"
+        setTimeout(() => {
+            const statusEl = document.getElementById('connection-status');
+            if (statusEl && !socket.connected) {
+                statusEl.innerHTML = 
+                    '<span class="status-indicator status-warning"></span>Offline (API verfügbar)';
+            }
+        }, 5000);
         
         // Update date and time every second
         function updateDateTime() {
@@ -340,6 +429,31 @@
         // Dark Mode Only - No Theme Toggle
         const body = document.body;
         body.setAttribute('data-theme', 'dark');
+        
+        // Active menu link highlighting
+        function setActiveMenuItem() {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-link');
+            
+            navLinks.forEach(link => {
+                const linkPath = link.getAttribute('data-path');
+                // Remove active class from all links
+                link.classList.remove('bg-white', 'bg-opacity-15', 'border-b-2', 'border-yellow-500');
+                
+                // Check if this is the active link
+                if (linkPath === currentPath || (currentPath === '/' && linkPath === '/')) {
+                    // Add active styling
+                    link.classList.add('bg-white', 'bg-opacity-15', 'border-b-2', 'border-yellow-500');
+                    link.style.transition = 'all 0.3s ease';
+                }
+            });
+        }
+        
+        // Set active menu on page load
+        setActiveMenuItem();
+        
+        // Update on navigation (for SPA-like behavior)
+        window.addEventListener('popstate', setActiveMenuItem);
     </script>
 
     {% block scripts %}{% endblock %}

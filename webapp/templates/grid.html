@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Grid Status - Phoenyra BESS Trade{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6">
+    <!-- Header -->
+    <div class="mb-8">
+        <h2 class="text-3xl font-bold text-white mb-2">
+            <i class="fas fa-plug mr-2"></i>Netz-Status und Beschränkungen
+        </h2>
+        <p class="text-gray-300">Echtzeit-Monitoring der Netzfrequenz und Grid-Constraints</p>
+    </div>
+
+    <!-- Grid Status Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+        <!-- Grid Frequency -->
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-1">Netzfrequenz</p>
+                    <p class="text-4xl font-bold number-ticker" id="grid-freq" style="color: #10b981;">50.00</p>
+                    <p class="text-sm text-gray-400 mt-1">Hz</p>
+                </div>
+                <div class="w-16 h-16 bg-green-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-wave-square text-3xl text-green-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Load -->
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-1">Netzlast</p>
+                    <p class="text-3xl font-bold text-blue-400 number-ticker" id="grid-load">-</p>
+                    <p class="text-sm text-gray-400 mt-1">MW</p>
+                </div>
+                <div class="w-16 h-16 bg-blue-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-bolt text-3xl text-blue-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Congestion Index -->
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-1">Congestion Index</p>
+                    <p class="text-3xl font-bold text-yellow-400 number-ticker" id="congestion-index">-</p>
+                    <p class="text-sm text-gray-400 mt-1">(0 = frei)</p>
+                </div>
+                <div class="w-16 h-16 bg-yellow-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-traffic-light text-3xl text-yellow-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Status -->
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-gray-400 mb-1">Netz-Status</p>
+                    <p class="text-lg font-bold" id="grid-status-text" style="color: #10b981;">NORMAL</p>
+                    <p class="text-sm text-gray-400 mt-1"><span class="status-indicator status-online"></span>Aktiv</p>
+                </div>
+                <div class="w-16 h-16 bg-green-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-check-circle text-3xl text-green-400" id="grid-status-icon"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Frequency Chart -->
+    <div class="dark-card p-6 mb-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+            <i class="fas fa-chart-line mr-2 text-green-400"></i>Netzfrequenz-Verlauf (letzten 5 Minuten)
+        </h3>
+        <div id="frequency-chart"></div>
+        <div class="mt-4 grid grid-cols-3 gap-4 text-center">
+            <div class="p-3 bg-red-900 bg-opacity-30 rounded-lg">
+                <p class="text-xs text-gray-400">Unterfrequenz</p>
+                <p class="text-sm font-bold text-red-400">&lt; 49.80 Hz</p>
+            </div>
+            <div class="p-3 bg-green-900 bg-opacity-30 rounded-lg">
+                <p class="text-xs text-gray-400">Normalbetrieb</p>
+                <p class="text-sm font-bold text-green-400">49.80 - 50.20 Hz</p>
+            </div>
+            <div class="p-3 bg-red-900 bg-opacity-30 rounded-lg">
+                <p class="text-xs text-gray-400">Überfrequenz</p>
+                <p class="text-sm font-bold text-red-400">&gt; 50.20 Hz</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tie Lines -->
+    <div class="dark-card p-6 mb-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+            <i class="fas fa-project-diagram mr-2 text-cyan-400"></i>Grenzkapazitäten (Tie-Lines)
+        </h3>
+        <div id="tie-lines-container" class="space-y-3">
+            <!-- Dynamically populated -->
+        </div>
+    </div>
+
+    <!-- Grid Constraints -->
+    <div class="dark-card p-6 mb-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+            <i class="fas fa-exclamation-triangle mr-2 text-orange-400"></i>Aktive Netzbeschränkungen
+        </h3>
+        <div id="constraints-container" class="space-y-3">
+            <div class="flex items-start p-3 bg-green-900 bg-opacity-30 border border-green-500 rounded-lg">
+                <i class="fas fa-check-circle text-green-400 text-xl mr-3 mt-1"></i>
+                <div>
+                    <p class="text-green-300 font-medium">Keine aktiven Beschränkungen</p>
+                    <p class="text-green-200 text-sm">Normalbetrieb - Alle Handelsaktivitäten möglich</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="dark-card p-6">
+        <h3 class="text-lg font-bold text-white mb-4">
+            <i class="fas fa-cogs mr-2 text-purple-400"></i>Monitoring-Einstellungen
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Marktgebiet</label>
+                <select id="grid-area" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500">
+                    <option value="AT" selected>Österreich (AT)</option>
+                    <option value="DE">Deutschland (DE)</option>
+                    <option value="CZ">Tschechien (CZ)</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Update-Intervall</label>
+                <select id="update-interval" class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-purple-500">
+                    <option value="2000">2 Sekunden</option>
+                    <option value="5000" selected>5 Sekunden</option>
+                    <option value="10000">10 Sekunden</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button onclick="refreshGridData()" class="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-2 px-4 rounded-lg transition-all duration-300">
+                    <i class="fas fa-sync-alt mr-2"></i>Jetzt aktualisieren
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let frequencyChart;
+let frequencyHistory = [];
+let updateTimer;
+
+// Initialize frequency chart
+function initFrequencyChart() {
+    const options = {
+        chart: {
+            type: 'line',
+            height: 300,
+            background: 'transparent',
+            foreColor: '#fff',
+            toolbar: { show: false },
+            animations: {
+                enabled: true,
+                dynamicAnimation: {
+                    speed: 500
+                }
+            }
+        },
+        theme: { mode: 'dark' },
+        series: [{
+            name: 'Frequenz',
+            data: []
+        }],
+        colors: ['#10b981'],
+        stroke: { curve: 'smooth', width: 3 },
+        grid: {
+            borderColor: '#374151',
+            yaxis: {
+                lines: { show: true }
+            }
+        },
+        xaxis: {
+            type: 'datetime',
+            labels: {
+                format: 'HH:mm:ss',
+                datetimeUTC: false
+            }
+        },
+        yaxis: {
+            title: { text: 'Frequenz (Hz)' },
+            min: 49.7,
+            max: 50.3,
+            tickAmount: 6,
+            labels: {
+                formatter: (val) => val.toFixed(2)
+            }
+        },
+        annotations: {
+            yaxis: [
+                {
+                    y: 49.8,
+                    borderColor: '#ef4444',
+                    label: {
+                        text: 'Min',
+                        style: { color: '#fff', background: '#ef4444' }
+                    }
+                },
+                {
+                    y: 50.2,
+                    borderColor: '#ef4444',
+                    label: {
+                        text: 'Max',
+                        style: { color: '#fff', background: '#ef4444' }
+                    }
+                },
+                {
+                    y: 50.0,
+                    borderColor: '#10b981',
+                    strokeDashArray: 5,
+                    label: {
+                        text: 'Soll',
+                        style: { color: '#fff', background: '#10b981' }
+                    }
+                }
+            ]
+        },
+        tooltip: {
+            theme: 'dark',
+            x: {
+                format: 'HH:mm:ss'
+            },
+            y: {
+                formatter: (val) => val.toFixed(3) + ' Hz'
+            }
+        }
+    };
+
+    frequencyChart = new ApexCharts(document.querySelector("#frequency-chart"), options);
+    frequencyChart.render();
+}
+
+async function fetchGridData() {
+    const area = document.getElementById('grid-area').value;
+    
+    try {
+        const response = await fetch(`/api/grid/state?area=${area}`);
+        const data = await response.json();
+        
+        if (data) {
+            updateGridMetrics(data);
+            updateFrequencyChart(data.freq_hz);
+            updateTieLines(data.tie_lines || []);
+        }
+    } catch (error) {
+        console.error('Error fetching grid data:', error);
+    }
+}
+
+async function fetchConstraints() {
+    try {
+        const response = await fetch('/api/grid/constraints?window=PT1H');
+        const data = await response.json();
+        
+        if (data && data.items) {
+            updateConstraints(data.items);
+        }
+    } catch (error) {
+        console.error('Error fetching constraints:', error);
+    }
+}
+
+function updateGridMetrics(data) {
+    // Update frequency with color coding
+    const freqElem = document.getElementById('grid-freq');
+    freqElem.textContent = data.freq_hz.toFixed(2);
+    
+    if (data.freq_hz < 49.8 || data.freq_hz > 50.2) {
+        freqElem.style.color = '#ef4444'; // Red
+    } else if (data.freq_hz < 49.9 || data.freq_hz > 50.1) {
+        freqElem.style.color = '#f59e0b'; // Orange
+    } else {
+        freqElem.style.color = '#10b981'; // Green
+    }
+    
+    // Update load
+    document.getElementById('grid-load').textContent = 
+        data.load_mw.toLocaleString('de-DE');
+    
+    // Update congestion index
+    document.getElementById('congestion-index').textContent = 
+        data.congestion_index.toFixed(2);
+    
+    // Update status
+    const statusText = document.getElementById('grid-status-text');
+    const statusIcon = document.getElementById('grid-status-icon');
+    
+    if (data.freq_hz < 49.8 || data.freq_hz > 50.2) {
+        statusText.textContent = 'KRITISCH';
+        statusText.style.color = '#ef4444';
+        statusIcon.className = 'fas fa-exclamation-triangle text-3xl text-red-400';
+    } else if (data.congestion_index > 0.5) {
+        statusText.textContent = 'ÜBERLASTET';
+        statusText.style.color = '#f59e0b';
+        statusIcon.className = 'fas fa-exclamation-circle text-3xl text-orange-400';
+    } else {
+        statusText.textContent = 'NORMAL';
+        statusText.style.color = '#10b981';
+        statusIcon.className = 'fas fa-check-circle text-3xl text-green-400';
+    }
+}
+
+function updateFrequencyChart(frequency) {
+    const now = new Date().getTime();
+    frequencyHistory.push({ x: now, y: frequency });
+    
+    // Keep only last 5 minutes (300 seconds / 5 sec interval = 60 points)
+    if (frequencyHistory.length > 60) {
+        frequencyHistory.shift();
+    }
+    
+    frequencyChart.updateSeries([{
+        name: 'Frequenz',
+        data: frequencyHistory
+    }]);
+}
+
+function updateTieLines(tieLines) {
+    const container = document.getElementById('tie-lines-container');
+    container.innerHTML = '';
+    
+    tieLines.forEach(line => {
+        const flowDirection = line.flow_mw > 0 ? 'Export' : 'Import';
+        const flowColor = line.flow_mw > 0 ? 'text-blue-400' : 'text-green-400';
+        
+        container.innerHTML += `
+            <div class="flex items-center justify-between p-4 bg-gray-800 bg-opacity-50 rounded-lg">
+                <div class="flex items-center">
+                    <i class="fas fa-exchange-alt text-cyan-400 text-2xl mr-4"></i>
+                    <div>
+                        <p class="text-white font-medium">${line.name}</p>
+                        <p class="text-sm text-gray-400">${flowDirection}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-2xl font-bold ${flowColor}">${Math.abs(line.flow_mw)}</p>
+                    <p class="text-sm text-gray-400">MW</p>
+                </div>
+            </div>
+        `;
+    });
+}
+
+function updateConstraints(items) {
+    const container = document.getElementById('constraints-container');
+    
+    if (items.length === 0) {
+        container.innerHTML = `
+            <div class="flex items-start p-3 bg-green-900 bg-opacity-30 border border-green-500 rounded-lg">
+                <i class="fas fa-check-circle text-green-400 text-xl mr-3 mt-1"></i>
+                <div>
+                    <p class="text-green-300 font-medium">Keine aktiven Beschränkungen</p>
+                    <p class="text-green-200 text-sm">Normalbetrieb - Alle Handelsaktivitäten möglich</p>
+                </div>
+            </div>
+        `;
+    } else {
+        container.innerHTML = '';
+        items.forEach(item => {
+            container.innerHTML += `
+                <div class="flex items-start p-3 bg-orange-900 bg-opacity-30 border border-orange-500 rounded-lg">
+                    <i class="fas fa-exclamation-triangle text-orange-400 text-xl mr-3 mt-1"></i>
+                    <div>
+                        <p class="text-orange-300 font-medium">${item.type.toUpperCase()}</p>
+                        <p class="text-orange-200 text-sm">${item.detail}</p>
+                        <p class="text-xs text-gray-400 mt-1">${new Date(item.ts).toLocaleString('de-DE')}</p>
+                    </div>
+                </div>
+            `;
+        });
+    }
+}
+
+function refreshGridData() {
+    fetchGridData();
+    fetchConstraints();
+}
+
+function startAutoUpdate() {
+    if (updateTimer) clearInterval(updateTimer);
+    
+    const interval = parseInt(document.getElementById('update-interval').value);
+    updateTimer = setInterval(() => {
+        fetchGridData();
+        fetchConstraints();
+    }, interval);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initFrequencyChart();
+    refreshGridData();
+    startAutoUpdate();
+    
+    // Update interval change handler
+    document.getElementById('update-interval').addEventListener('change', startAutoUpdate);
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,35 @@
+{
+  "title": "Phoenyra \u2013 Risk / VaR & Limits",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "VaR 99% (EUR)",
+      "targets": [
+        {
+          "expr": "pho_risk_var_99_eur"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "VaR 95/99 (EUR)",
+      "targets": [
+        {
+          "expr": "pho_risk_var_95_eur"
+        },
+        {
+          "expr": "pho_risk_var_99_eur"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Limit Utilization (%)",
+      "targets": [
+        {
+          "expr": "pho_risk_limit_utilization_pct"
+        }
+      ]
+    }
+  ]
+}

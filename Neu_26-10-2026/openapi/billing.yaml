@@ -1,0 +1,48 @@
+openapi: 3.0.3
+info:
+  title: Phoenyra Billing API
+  version: 0.1.0
+servers:
+  - url: http://localhost:9504
+paths:
+  /billing/generate:
+    post:
+      summary: Generate invoices for a billing period
+      parameters:
+        - in: query
+          name: period
+          schema: { type: string, example: "2025-10" }
+      responses:
+        "200":
+          description: Invoice batch generation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  period: { type: string }
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        invoice_id: { type: string }
+                        counterparty: { type: string }
+                        total_eur: { type: number }
+                        pdf_url: { type: string }
+  /billing/invoice/{id}:
+    get:
+      summary: Download invoice PDF
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary

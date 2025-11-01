@@ -1,0 +1,40 @@
+openapi: 3.0.3
+info:
+  title: Phoenyra Credit API
+  version: 0.1.0
+servers:
+  - url: http://localhost:9503
+paths:
+  /credit/limit:
+    post:
+      summary: Set or update a credit limit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                counterparty: { type: string }
+                limit_eur: { type: number }
+      responses:
+        "200":
+          description: OK
+  /credit/exposure:
+    get:
+      summary: Get exposure by counterparty
+      parameters:
+        - in: query
+          name: counterparty
+          schema: { type: string }
+      responses:
+        "200":
+          description: Exposure data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counterparty: { type: string }
+                  exposure_eur: { type: number }
+                  utilization_pct: { type: number }

@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  forecast:
+    build: ./forecast
+    ports: ["9500:9500"]
+  grid:
+    build: ./grid
+    ports: ["9501:9501"]
+  risk:
+    build: ./risk
+    ports: ["9502:9502"]
+  credit:
+    build: ./credit
+    ports: ["9503:9503"]
+  billing:
+    build: ./billing
+    ports: ["9504:9504"]
