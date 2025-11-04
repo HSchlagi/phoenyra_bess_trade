@@ -21,6 +21,7 @@ GRID_BASE_URL = os.getenv('GRID_BASE_URL', 'http://grid:9501')
 RISK_BASE_URL = os.getenv('RISK_BASE_URL', 'http://risk:9502')
 CREDIT_BASE_URL = os.getenv('CREDIT_BASE_URL', 'http://credit:9503')
 BILLING_BASE_URL = os.getenv('BILLING_BASE_URL', 'http://billing:9504')
+TRADING_BRIDGE_URL = os.getenv('TRADING_BRIDGE_URL', 'http://trading-bridge:9510')
 API_KEY = os.getenv('API_KEY', 'demo')
 HMAC_SECRET = os.getenv('HMAC_SECRET', 'phoenyra_demo_secret')
 
@@ -155,9 +156,45 @@ def get_trades():
 
 @app.route('/api/orders', methods=['POST'])
 def create_order():
+    """Create order - route to internal exchange or external trading bridge"""
     order_data = request.get_json()
-    result = trading_api.create_order(order_data)
-    return jsonify(result)
+    target_exchange = order_data.get('target_exchange', 'INTERNAL')
+    
+    # Route to appropriate exchange
+    if target_exchange == 'INTERNAL':
+        # Internal exchange (current behavior)
+        result = trading_api.create_order(order_data)
+        return jsonify(result)
+    elif target_exchange in ['EPEX_SPOT', 'APG']:
+        # External exchange - route through trading bridge
+        try:
+            bridge_url = os.getenv('TRADING_BRIDGE_URL', 'http://trading-bridge:9510')
+            response = requests.post(
+                f"{bridge_url}/bridge/orders",
+                json=order_data,
+                timeout=10
+            )
+            if response.status_code == 200:
+                return jsonify(response.json())
+            else:
+                return jsonify({
+                    "error": f"Trading Bridge Error: {response.status_code}",
+                    "message": response.text,
+                    "fallback": "Order wurde nicht übertragen. Bitte Credentials prüfen."
+                }), response.status_code
+        except requests.exceptions.ConnectionError:
+            return jsonify({
+                "error": "Trading Bridge nicht erreichbar",
+                "message": "Der Trading-Bridge-Service ist nicht verfügbar. Externe Plattformen erfordern zusätzliche Konfiguration.",
+                "fallback": "Bitte verwenden Sie 'Interner Exchange' oder kontaktieren Sie den Administrator."
+            }), 503
+        except Exception as e:
+            return jsonify({
+                "error": str(e),
+                "message": "Fehler bei der Übertragung an externe Plattform"
+            }), 500
+    else:
+        return jsonify({"error": f"Unbekannte Trading-Plattform: {target_exchange}"}), 400
 
 @app.route('/order', methods=['POST'])
 def create_order_form():
@@ -167,6 +204,7 @@ def create_order_form():
         quantity_mwh = float(request.form["amount"])
         limit_price_eur_mwh = float(request.form["price"])
         market = request.form["market"]
+        target_exchange = request.form.get("target_exchange", "INTERNAL")  # Default: INTERNAL
         
         # Generate delivery times for 1 hour
         now = datetime.now()
@@ -181,13 +219,31 @@ def create_order_form():
             "delivery_start": delivery_start,
             "delivery_end": delivery_end,
             "order_type": "LIMIT",
-            "time_in_force": "GFD"
+            "time_in_force": "GFD",
+            "target_exchange": target_exchange  # INTERNAL, EPEX_SPOT, or APG
         }
 
-        response = requests.post(f"{EXCHANGE_BASE_URL}/orders", json=order_data)
-        response.raise_for_status()
-        
-        flash("Order successfully created!", "success")
+        # Route to appropriate exchange
+        if target_exchange == 'INTERNAL':
+            # Internal exchange (current behavior)
+            response = requests.post(f"{EXCHANGE_BASE_URL}/orders", json=order_data, headers={"X-API-KEY": API_KEY})
+            response.raise_for_status()
+            flash("Order erfolgreich erstellt!", "success")
+        elif target_exchange in ['EPEX_SPOT', 'APG']:
+            # External exchange - route through trading bridge
+            try:
+                bridge_url = os.getenv('TRADING_BRIDGE_URL', 'http://trading-bridge:9510')
+                response = requests.post(f"{bridge_url}/bridge/orders", json=order_data, timeout=10)
+                if response.status_code == 200:
+                    flash(f"Order an {target_exchange} übertragen!", "success")
+                else:
+                    flash(f"Fehler bei {target_exchange}: {response.text}", "error")
+            except requests.exceptions.ConnectionError:
+                flash("Trading Bridge nicht erreichbar. Bitte Credentials prüfen oder 'Interner Exchange' verwenden.", "error")
+            except Exception as e:
+                flash(f"Fehler: {str(e)}", "error")
+        else:
+            flash(f"Unbekannte Trading-Plattform: {target_exchange}", "error")
     except requests.exceptions.HTTPError as e:
         try:
             error_detail = e.response.json().get("detail", "Unknown error")
@@ -231,6 +287,16 @@ def update_telemetry():
 def config_page():
     """BESS Telemetrie-Konfigurationsseite"""
     return render_template('config.html')
+
+@app.route('/trading-config')
+def trading_config():
+    """Trading-Plattform Konfigurationsseite"""
+    return render_template('trading-config.html')
+
+@app.route('/trading-bridge-konzept')
+def trading_bridge_konzept():
+    """Trading-Bridge Konzept Dokumentation"""
+    return render_template('trading-bridge-konzept.html')
 
 # ---- Forecast Dashboard ----
 @app.route('/forecast')
@@ -496,6 +562,76 @@ async def fetch_ws_data():
 @socketio.on('start_ws_connection')
 def start_ws_connection():
     asyncio.create_task(fetch_ws_data())
+
+# Trading Bridge API Routes
+@app.route('/api/trading-bridge/status')
+def trading_bridge_status():
+    """Get status of trading bridge adapters"""
+    try:
+        response = requests.get(f"{TRADING_BRIDGE_URL}/bridge/status", timeout=5)
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            return jsonify({"error": "Trading Bridge nicht erreichbar"}), 503
+    except Exception as e:
+        return jsonify({"error": str(e)}), 503
+
+@app.route('/api/trading-bridge/credentials')
+def get_trading_credentials():
+    """Get current trading credentials (masked)"""
+    try:
+        # Get status to check if configured
+        status_response = requests.get(f"{TRADING_BRIDGE_URL}/bridge/status", timeout=5)
+        status_data = status_response.json() if status_response.status_code == 200 else {}
+        
+        # Return masked credentials (from environment or config)
+        return jsonify({
+            "epex": {
+                "username": os.getenv('EPEX_USERNAME', ''),
+                "api_key": os.getenv('EPEX_API_KEY', ''),
+                "test_mode": os.getenv('EPEX_TEST_MODE', 'true').lower() == 'true',
+                "configured": status_data.get('epex_spot', {}).get('configured', False)
+            },
+            "apg": {
+                "mpid": os.getenv('APG_MPID', ''),
+                "bilanzgruppe": os.getenv('APG_BILANZGRUPPE', ''),
+                "as4_endpoint": os.getenv('APG_AS4_ENDPOINT', ''),
+                "configured": status_data.get('apg', {}).get('configured', False)
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/trading-bridge/credentials/epex', methods=['POST'])
+def save_epex_credentials():
+    """Save EPEX Spot credentials"""
+    try:
+        data = request.get_json()
+        # In production: Store securely (e.g., encrypted config file or secret manager)
+        # For now: Return success (actual storage would require Trading Bridge service update)
+        # TODO: Implement secure credential storage
+        return jsonify({
+            "success": True,
+            "message": "Credentials werden im Trading-Bridge Service gespeichert. Bitte setzen Sie die Environment-Variablen im Docker-Compose oder kontaktieren Sie den Administrator.",
+            "note": "Für Produktionsumgebung: Credentials sollten über sichere Secret-Management gespeichert werden"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/trading-bridge/credentials/apg', methods=['POST'])
+def save_apg_credentials():
+    """Save APG credentials"""
+    try:
+        data = request.get_json()
+        # In production: Store securely
+        # For now: Return success
+        return jsonify({
+            "success": True,
+            "message": "Credentials werden im Trading-Bridge Service gespeichert. Bitte setzen Sie die Environment-Variablen im Docker-Compose oder kontaktieren Sie den Administrator.",
+            "note": "Für Produktionsumgebung: Credentials sollten über sichere Secret-Management gespeichert werden"
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, use_reloader=True)

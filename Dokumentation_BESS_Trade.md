@@ -15,6 +15,7 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Grid API** (FastAPI): Netzfrequenz-Monitoring und Grid Constraints
 - **Credit API** (FastAPI): Counterparty Exposure Management
 - **Billing API** (FastAPI): Rechnungserstellung und PDF-Generierung
+- **Trading Bridge Service** (FastAPI): Routing zu externen Trading-Plattformen (EPEX Spot, APG)
 - **Redis**: In-Memory-Datenbank für Caching und Session-Management
 - **Prometheus**: Metriken-Sammlung und Monitoring
 - **Grafana**: Visualisierung und Alerting
@@ -45,16 +46,20 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 
 ### 3. Trading-Funktionen
 - **Order-Erstellung** mit Side (Buy/Sell), Menge, Preis und Markt
+- **Trading-Plattform-Auswahl** (Interner Exchange / EPEX Spot / APG)
 - **Aktive Orders** Übersicht
 - **Recent Trades** Anzeige
-- **Live-Marktpreise** von aWattar (Österreich/Deutschland)
+- **Live-Marktpreise** von ENTSO-E/EPEX Spot (Österreich)
 - **Marktpreise** Visualisierung (Mark, EMA, VWAP)
 - **VWAP-Chart** mit 15-Minuten-Intervallen
+- **Automatische Preisumrechnung** (ct/kWh → EUR/MWh)
 
 ### 4. Chart-Visualisierung
 - **ApexCharts Integration** für professionelle Charts
-- **Marktpreise-Chart** mit Mark, EMA und VWAP
+- **Marktpreise-Zeitreihen-Chart** mit historischen Daten (Mark, EMA, VWAP)
 - **VWAP-Zeitreihen-Chart** mit 15-Minuten-Intervallen
+- **Interaktive Charts** mit Zoom, Pan und Tooltips
+- **Automatische Preisvalidierung** (nur Preise 0-1000 EUR/MWh)
 - **Sattes Grün** für optimale Sichtbarkeit
 - **Responsive Design** für verschiedene Bildschirmgrößen
 
@@ -74,6 +79,15 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Live-Verbindungstests** für alle Schnittstellen
 - **Benutzerfreundliche Konfiguration** mit Tab-Navigation
 
+### 7. Trading Bridge & Externe Plattformen
+- **Trading Bridge Service** für Routing zu externen Trading-Plattformen
+- **EPEX Spot Integration** für Day-Ahead und Intraday Trading
+- **APG Integration** für Fahrplanübermittlung (EDIFACT/XML)
+- **Credentials-Verwaltung** über Trading-Config Dashboard
+- **Status-Monitoring** aller Trading-Adapter
+- **Test-Modus** für sichere Integrationstests
+- **Automatische Order-Routing** basierend auf Plattform-Auswahl
+
 ## Technische Details
 
 ### Docker-Container
@@ -87,6 +101,7 @@ services:
   risk:            # Risk API (Port 9502)
   credit:          # Credit API (Port 9503)
   billing:         # Billing API (Port 9504)
+  trading-bridge:  # Trading Bridge Service (Port 9510)
   redis:           # In-Memory Database
   prometheus:      # Metrics Collection (Port 9090)
   grafana:         # Visualization (Port 3000)
@@ -126,6 +141,12 @@ services:
 - `POST /api/billing/generate` - Rechnung generieren
 - `GET /api/billing/invoice/{id}` - Invoice PDF herunterladen
 
+#### Trading Bridge API
+- `POST /api/trading-bridge/credentials/epex` - EPEX Spot Credentials speichern
+- `POST /api/trading-bridge/credentials/apg` - APG Credentials speichern
+- `GET /api/trading-bridge/status` - Status aller Trading-Adapter abrufen
+- `GET /api/trading-bridge/credentials` - Aktuelle Credentials abrufen (maskiert)
+
 #### Konfiguration
 - `POST /api/config/save` - Konfiguration speichern
 - `GET /api/config/load` - Konfiguration laden
@@ -159,6 +180,18 @@ HMAC_SECRET=phoenyra_demo_secret
 #### ETRM Services (Forecast, Grid, Risk, Credit, Billing)
 Alle Services laufen mit Standard-Umgebungsvariablen und benötigen keine zusätzliche Konfiguration für den Basiseinsatz. Prometheus-Metriken werden automatisch unter `/metrics` bereitgestellt.
 
+#### Trading Bridge Service
+```bash
+EXCHANGE_BASE_URL=http://exchange:9000
+EPEX_USERNAME=${EPEX_USERNAME:-}
+EPEX_PASSWORD=${EPEX_PASSWORD:-}
+EPEX_API_KEY=${EPEX_API_KEY:-}
+EPEX_TEST_MODE=${EPEX_TEST_MODE:-true}
+APG_MPID=${APG_MPID:-}
+APG_BILANZGRUPPE=${APG_BILANZGRUPPE:-}
+APG_AS4_ENDPOINT=${APG_AS4_ENDPOINT:-}
+```
+
 ## Installation und Start
 
 ### Voraussetzungen
@@ -188,12 +221,14 @@ docker compose ps
   - **Credit**: http://localhost:5000/credit
   - **Billing**: http://localhost:5000/billing
   - **Konfiguration**: http://localhost:5000/config
+  - **Trading-Config**: http://localhost:5000/trading-config
 - **Exchange API**: http://localhost:9000/docs
 - **Forecast API**: http://localhost:9500/docs
 - **Grid API**: http://localhost:9501/docs
 - **Risk API**: http://localhost:9502/docs
 - **Credit API**: http://localhost:9503/docs
 - **Billing API**: http://localhost:9504/docs
+- **Trading Bridge API**: http://localhost:9510/docs
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Prometheus**: http://localhost:9090
 
@@ -217,7 +252,9 @@ webapp/
 │   ├── risk.html          # Risk Management Dashboard
 │   ├── grid.html          # Grid Status Dashboard
 │   ├── credit.html        # Credit Management Dashboard
-│   └── billing.html       # Billing Dashboard
+│   ├── billing.html       # Billing Dashboard
+│   ├── trading-config.html # Trading-Plattform Konfiguration
+│   └── trading-bridge-konzept.html # Trading-Bridge Dokumentation
 ├── static/
 │   └── phoenyra_logo.png  # Logo
 └── Dockerfile             # Container-Definition
@@ -248,6 +285,10 @@ etrm/
 │   └── Dockerfile
 ├── billing/
 │   ├── main.py            # Billing API
+│   ├── requirements.txt
+│   └── Dockerfile
+├── trading-bridge/
+│   ├── main.py            # Trading Bridge Service
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── openapi/               # OpenAPI Spezifikationen

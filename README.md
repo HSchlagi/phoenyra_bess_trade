@@ -24,6 +24,7 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **⚡ Grid API**: Netzfrequenz-Monitoring und Grid-Constraints
 - **💳 Credit API**: Counterparty Exposure Management
 - **💰 Billing API**: Automatische Rechnungserstellung mit PDF-Export
+- **🌉 Trading Bridge Service**: Routing zu externen Trading-Plattformen (EPEX Spot, APG)
 
 ### Dashboards
 - **📊 Haupt-Dashboard**: Trading, BESS Status, Marktdaten
@@ -32,6 +33,7 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **🔌 Grid Dashboard**: Live-Netzfrequenz & Constraints
 - **💳 Credit Dashboard**: Exposure-Tracking & Limits
 - **💰 Billing Dashboard**: Invoice-Verwaltung
+- **🔑 Trading-Config**: Credentials-Verwaltung für externe Trading-Plattformen
 
 ## 🏗️ Architektur
 
@@ -44,6 +46,7 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Grid API** (FastAPI): Netzfrequenz & Grid-Constraints (Port 9501)
 - **Credit API** (FastAPI): Counterparty Exposure Management (Port 9503)
 - **Billing API** (FastAPI): Rechnungserstellung & PDF-Export (Port 9504)
+- **Trading Bridge Service** (FastAPI): Routing zu externen Trading-Plattformen (Port 9510)
 - **Redis**: In-Memory-Datenbank für Caching
 - **Prometheus**: Metriken-Sammlung und Monitoring (Port 9090)
 - **Grafana**: Visualisierung und Alerting (Port 3000)
@@ -86,6 +89,7 @@ docker compose ps
 - **💳 Credit**: http://localhost:5000/credit
 - **💰 Billing**: http://localhost:5000/billing
 - **⚙️ Konfiguration**: http://localhost:5000/config
+- **🔑 Trading-Config**: http://localhost:5000/trading-config
 
 #### API-Dokumentation
 - **🔌 Exchange API**: http://localhost:9000/docs
@@ -94,6 +98,7 @@ docker compose ps
 - **🛡️ Risk API**: http://localhost:9502/docs
 - **💳 Credit API**: http://localhost:9503/docs
 - **💰 Billing API**: http://localhost:9504/docs
+- **🌉 Trading Bridge API**: http://localhost:9510/docs
 
 #### Monitoring
 - **📈 Grafana**: http://localhost:3000 (admin/admin)
@@ -106,7 +111,8 @@ docker compose ps
 #### Haupt-Dashboard
 - **BESS-Status-Monitoring** in Echtzeit
 - **Trading-Operations** mit Order-Management
-- **Marktpreise-Visualisierung** mit professionellen Charts
+- **Marktpreise-Visualisierung** mit Zeitreihen-Charts
+- **Trading-Plattform-Auswahl** (Interner Exchange / EPEX Spot / APG)
 - **Automatische Order-Ausführung** via Matching-Engine
 
 #### ETRM-Dashboards
@@ -146,6 +152,11 @@ docker compose ps
 - `POST /api/billing/generate` - Rechnung generieren
 - `GET /api/billing/invoice/{id}` - Invoice PDF herunterladen
 
+#### Trading Bridge
+- `POST /api/trading-bridge/credentials/epex` - EPEX Spot Credentials speichern
+- `POST /api/trading-bridge/credentials/apg` - APG Credentials speichern
+- `GET /api/trading-bridge/status` - Status aller Trading-Adapter abrufen
+
 ## 🔧 Entwicklung
 
 ### Live-Reload
@@ -169,7 +180,9 @@ phoenyra_BESS_Trade/
 │   │   ├── grid.html          # Grid Dashboard
 │   │   ├── credit.html        # Credit Dashboard
 │   │   ├── billing.html       # Billing Dashboard
-│   │   └── config.html        # BESS-Konfiguration
+│   │   ├── config.html        # BESS-Konfiguration
+│   │   ├── trading-config.html # Trading-Plattform Konfiguration
+│   │   └── trading-bridge-konzept.html # Trading-Bridge Dokumentation
 │   └── static/
 │       └── phoenyra_logo.png
 ├── exchange/                  # Trading-Engine
@@ -182,6 +195,7 @@ phoenyra_BESS_Trade/
 │   ├── risk/                  # Risk API
 │   ├── credit/                # Credit API
 │   ├── billing/               # Billing API
+│   ├── trading-bridge/        # Trading Bridge Service
 │   ├── openapi/               # OpenAPI Spezifikationen
 │   ├── grafana_dashboards/    # Grafana Dashboard JSONs
 │   └── n8n_workflows/         # n8n Workflow-Definitionen
@@ -208,6 +222,7 @@ phoenyra_BESS_Trade/
 - **Grid**: `pho_grid_freq_hz`, `pho_grid_load_mw`
 - **Credit**: `pho_credit_exposure_eur` (pro Counterparty)
 - **Billing**: `pho_bo_invoices_total`
+- **Trading Bridge**: Status und Konfiguration der externen Trading-Plattformen
 
 ### Grafana Dashboards
 - **BESS-Überwachung**: SoC, Leistung, Temperatur-Trends
@@ -229,6 +244,7 @@ phoenyra_BESS_Trade/
 Vollständige Dokumentation finden Sie in:
 - **[Dokumentation_BESS_Trade.md](Dokumentation_BESS_Trade.md)** - Vollständige System-Dokumentation (v3.0)
 - **[Summary_BESS_Trade.md](Summary_BESS_Trade.md)** - Zusammenfassung der ETRM-Integration
+- **[TRADING_BRIDGE_KONZEPT.md](TRADING_BRIDGE_KONZEPT.md)** - Trading-Bridge Konzept & Integration
 - **[PROMETHEUS_GUIDE.md](PROMETHEUS_GUIDE.md)** - Prometheus Queries & Metriken
 - **[Phoenyra_BESS_Trading_Final_Documentation_v2.md](Phoenyra_BESS_Trading_Final_Documentation_v2.md)** - Legacy Dokumentation v2.0
 
@@ -250,9 +266,17 @@ Bei Fragen oder Problemen:
 - Erstelle ein [Issue](https://github.com/HSchlagi/phoenyra_bess_trade/issues)
 - Kontaktiere uns unter: office@instanet.at
 
-## 🆕 Was ist neu? (v3.0 - 01.11.2025)
+## 🆕 Was ist neu? (v3.0 - 04.11.2025)
 
-### ETRM Services Integration
+### Trading-Bridge Integration (04.11.2025)
+- ✅ **Trading Bridge Service** für Routing zu externen Plattformen (EPEX Spot, APG)
+- ✅ **Trading-Config Dashboard** für Credentials-Verwaltung
+- ✅ **Order-Formular erweitert** mit Plattform-Auswahl (Intern / EPEX Spot / APG)
+- ✅ **Trading-Bridge-Konzept-Dokumentation** mit vollständiger Integration-Anleitung
+- ✅ **Marktpreis-Chart verbessert** auf Zeitreihen-Chart umgestellt
+- ✅ **Umrechnungsfehler behoben** (ct/kWh → EUR/MWh)
+
+### ETRM Services Integration (01.11.2025)
 - ✅ **5 neue Enterprise Services** integriert (Forecast, Risk, Grid, Credit, Billing)
 - ✅ **5 neue Dashboards** mit interaktiven Charts
 - ✅ **Prometheus-Monitoring** für alle Services

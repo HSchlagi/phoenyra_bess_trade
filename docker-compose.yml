@@ -136,3 +136,21 @@ services:
     ports:
       - "9504:9504"
     restart: unless-stopped
+
+  trading-bridge:
+    build: ./etrm/trading-bridge
+    container_name: trading-bridge
+    ports:
+      - "9510:9510"
+    environment:
+      - EXCHANGE_BASE_URL=http://exchange:9000
+      - EPEX_USERNAME=${EPEX_USERNAME:-}
+      - EPEX_PASSWORD=${EPEX_PASSWORD:-}
+      - EPEX_API_KEY=${EPEX_API_KEY:-}
+      - EPEX_TEST_MODE=${EPEX_TEST_MODE:-true}
+      - APG_MPID=${APG_MPID:-}
+      - APG_BILANZGRUPPE=${APG_BILANZGRUPPE:-}
+      - APG_AS4_ENDPOINT=${APG_AS4_ENDPOINT:-}
+    restart: unless-stopped
+    depends_on:
+      - exchange

@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+
+{% block title %}Trading-Plattform Konfiguration{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0 relative z-10">
+    <!-- Hero Section -->
+    <div class="text-center mb-8">
+        <h1 class="aurora-text text-2xl md:text-3xl font-bold mb-4">
+            Trading-Plattform Konfiguration
+        </h1>
+        <p class="text-gray-300 text-sm">
+            Konfigurieren Sie Ihre Zugangsdaten für externe Trading-Plattformen
+        </p>
+    </div>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages mb-4">
+          {% for category, message in messages %}
+            <div class="p-3 rounded-md mb-2 {% if category == 'error' %}bg-red-500 text-white{% elif category == 'success' %}bg-green-500 text-white{% else %}bg-blue-500 text-white{% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Status Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="dark-card p-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-400">Interner Exchange</h3>
+                    <p class="text-2xl font-bold text-green-400 mt-2">✅ Aktiv</p>
+                </div>
+                <i class="fas fa-home text-4xl text-green-400 opacity-50"></i>
+            </div>
+        </div>
+        <div class="dark-card p-6" id="epex-status-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-400">EPEX Spot</h3>
+                    <p class="text-2xl font-bold text-gray-400 mt-2" id="epex-status">⏳ Prüfe...</p>
+                </div>
+                <i class="fas fa-bolt text-4xl text-gray-400 opacity-50"></i>
+            </div>
+        </div>
+        <div class="dark-card p-6" id="apg-status-card">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-sm font-medium text-gray-400">APG</h3>
+                    <p class="text-2xl font-bold text-gray-400 mt-2" id="apg-status">⏳ Prüfe...</p>
+                </div>
+                <i class="fas fa-plug text-4xl text-gray-400 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- EPEX Spot Configuration -->
+    <div class="dark-card p-6 mb-6">
+        <h3 class="text-lg leading-6 font-medium text-white mb-4">
+            <i class="fas fa-bolt mr-2 text-yellow-400"></i>EPEX Spot Konfiguration
+        </h3>
+        <p class="text-sm text-gray-400 mb-4">
+            Für EPEX Spot Trading benötigen Sie eine Mitgliedschaft, Clearing-Teilnahme (ECC) und API-Zugangsdaten.
+        </p>
+        
+        <form id="epex-form" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                    <input type="text" id="epex-username" name="username" 
+                           class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ihr EPEX Spot Username">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                    <input type="password" id="epex-password" name="password" 
+                           class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ihr EPEX Spot Password">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
+                <input type="text" id="epex-api-key" name="api_key" 
+                       class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="Ihr EPEX Spot API Key">
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" id="epex-test-mode" name="test_mode" checked
+                       class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <label for="epex-test-mode" class="ml-2 block text-sm text-gray-300">
+                    Test-Modus verwenden (empfohlen für erste Tests)
+                </label>
+            </div>
+            <button type="submit" class="shimmer-button px-4 py-2 rounded-md text-sm font-medium">
+                <i class="fas fa-save mr-2"></i>EPEX Spot Credentials speichern
+            </button>
+        </form>
+    </div>
+
+    <!-- APG Configuration -->
+    <div class="dark-card p-6 mb-6">
+        <h3 class="text-lg leading-6 font-medium text-white mb-4">
+            <i class="fas fa-plug mr-2 text-blue-400"></i>APG (Austrian Power Grid) Konfiguration
+        </h3>
+        <p class="text-sm text-gray-400 mb-4">
+            Für APG Trading benötigen Sie eine Marktteilnehmer-Registrierung, Bilanzgruppenvertrag, MPID und AS4-Anbindung.
+        </p>
+        
+        <form id="apg-form" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Marktpartner-ID (MPID)</label>
+                    <input type="text" id="apg-mpid" name="mpid" 
+                           class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="z.B. AT-XXXX-XXXX">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Bilanzgruppe</label>
+                    <input type="text" id="apg-bilanzgruppe" name="bilanzgruppe" 
+                           class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Ihre Bilanzgruppe">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">AS4 Endpoint</label>
+                <input type="text" id="apg-as4-endpoint" name="as4_endpoint" 
+                       class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                       placeholder="https://as4.apg.at/...">
+                <p class="text-xs text-gray-400 mt-1">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    AS4 oder ENTSO-E ECP Endpoint für sichere Kommunikation mit APG
+                </p>
+            </div>
+            <button type="submit" class="shimmer-button px-4 py-2 rounded-md text-sm font-medium">
+                <i class="fas fa-save mr-2"></i>APG Credentials speichern
+            </button>
+        </form>
+    </div>
+
+    <!-- Info Box -->
+    <div class="dark-card p-6 bg-blue-900 bg-opacity-20 border-blue-500">
+        <h4 class="text-md font-medium text-blue-300 mb-2">
+            <i class="fas fa-info-circle mr-2"></i>Wichtige Hinweise
+        </h4>
+        <ul class="text-sm text-gray-300 space-y-2">
+            <li>• Credentials werden sicher im Trading-Bridge Service gespeichert</li>
+            <li>• Für EPEX Spot: Mitgliedschaft und ECC Clearing-Teilnahme erforderlich</li>
+            <li>• Für APG: Marktteilnehmer-Registrierung bei E-Control und Bilanzgruppenvertrag erforderlich</li>
+            <li>• Test-Modus empfohlen für erste Integrationstests</li>
+            <li>• Siehe <a href="/trading-bridge-konzept" class="text-blue-400 hover:underline">Trading-Bridge Konzept</a> für Details</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+// Load current status
+async function loadStatus() {
+    try {
+        const response = await fetch('/api/trading-bridge/status');
+        const data = await response.json();
+        
+        // Update EPEX status
+        const epexConfigured = data.epex_spot?.configured || false;
+        const epexStatusEl = document.getElementById('epex-status');
+        const epexCard = document.getElementById('epex-status-card');
+        if (epexConfigured) {
+            epexStatusEl.textContent = '✅ Konfiguriert';
+            epexStatusEl.className = 'text-2xl font-bold text-green-400 mt-2';
+            epexCard.querySelector('i').className = 'fas fa-bolt text-4xl text-green-400 opacity-50';
+        } else {
+            epexStatusEl.textContent = '❌ Nicht konfiguriert';
+            epexStatusEl.className = 'text-2xl font-bold text-gray-400 mt-2';
+        }
+        
+        // Update APG status
+        const apgConfigured = data.apg?.configured || false;
+        const apgStatusEl = document.getElementById('apg-status');
+        const apgCard = document.getElementById('apg-status-card');
+        if (apgConfigured) {
+            apgStatusEl.textContent = '✅ Konfiguriert';
+            apgStatusEl.className = 'text-2xl font-bold text-green-400 mt-2';
+            apgCard.querySelector('i').className = 'fas fa-plug text-4xl text-green-400 opacity-50';
+        } else {
+            apgStatusEl.textContent = '❌ Nicht konfiguriert';
+            apgStatusEl.className = 'text-2xl font-bold text-gray-400 mt-2';
+        }
+    } catch (error) {
+        console.error('Error loading status:', error);
+    }
+}
+
+// Load current credentials
+async function loadCredentials() {
+    try {
+        const response = await fetch('/api/trading-bridge/credentials');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Load EPEX credentials (masked)
+            if (data.epex) {
+                document.getElementById('epex-username').value = data.epex.username || '';
+                document.getElementById('epex-api-key').value = data.epex.api_key || '';
+                document.getElementById('epex-test-mode').checked = data.epex.test_mode !== false;
+            }
+            
+            // Load APG credentials
+            if (data.apg) {
+                document.getElementById('apg-mpid').value = data.apg.mpid || '';
+                document.getElementById('apg-bilanzgruppe').value = data.apg.bilanzgruppe || '';
+                document.getElementById('apg-as4-endpoint').value = data.apg.as4_endpoint || '';
+            }
+        }
+    } catch (error) {
+        console.error('Error loading credentials:', error);
+    }
+}
+
+// EPEX Form Submit
+document.getElementById('epex-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = {
+        username: document.getElementById('epex-username').value,
+        password: document.getElementById('epex-password').value,
+        api_key: document.getElementById('epex-api-key').value,
+        test_mode: document.getElementById('epex-test-mode').checked
+    };
+    
+    try {
+        const response = await fetch('/api/trading-bridge/credentials/epex', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            alert('EPEX Spot Credentials erfolgreich gespeichert!');
+            loadStatus();
+            // Don't reload password field
+            document.getElementById('epex-password').value = '';
+        } else {
+            const error = await response.json();
+            alert('Fehler: ' + (error.detail || error.message || 'Unbekannter Fehler'));
+        }
+    } catch (error) {
+        alert('Fehler beim Speichern: ' + error.message);
+    }
+});
+
+// APG Form Submit
+document.getElementById('apg-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = {
+        mpid: document.getElementById('apg-mpid').value,
+        bilanzgruppe: document.getElementById('apg-bilanzgruppe').value,
+        as4_endpoint: document.getElementById('apg-as4-endpoint').value
+    };
+    
+    try {
+        const response = await fetch('/api/trading-bridge/credentials/apg', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            alert('APG Credentials erfolgreich gespeichert!');
+            loadStatus();
+        } else {
+            const error = await response.json();
+            alert('Fehler: ' + (error.detail || error.message || 'Unbekannter Fehler'));
+        }
+    } catch (error) {
+        alert('Fehler beim Speichern: ' + error.message);
+    }
+});
+
+// Load on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadStatus();
+    loadCredentials();
+});
+</script>
+{% endblock %}
+

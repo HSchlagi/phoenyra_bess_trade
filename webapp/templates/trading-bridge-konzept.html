@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Trading-Bridge Konzept{% endblock %}
+
+{% block content %}
+<div class="px-4 py-6 sm:px-0 relative z-10 max-w-6xl mx-auto">
+    <!-- Hero Section -->
+    <div class="text-center mb-8">
+        <h1 class="aurora-text text-2xl md:text-3xl font-bold mb-4">
+            Trading-Bridge Konzept: APG & EPEX Spot Integration
+        </h1>
+        <p class="text-gray-300 text-sm">
+            Vollständige Dokumentation zur Integration externer Trading-Plattformen
+        </p>
+    </div>
+
+    <!-- Aktueller Stand -->
+    <div class="dark-card p-6 mb-6">
+        <h2 class="text-xl font-bold text-white mb-4">📊 Aktueller Stand</h2>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-green-400 mb-3">✅ Was bereits funktioniert:</h3>
+            <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+                <li>Marktdaten-Abruf: EPEX Spot Preise über ENTSO-E Transparency Platform</li>
+                <li>Internes Trading: Vollständige Order-Verwaltung und Matching-Engine</li>
+                <li>Forecast & Risk: ETRM Services für Trading-Entscheidungen</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-semibold text-red-400 mb-3">❌ Was noch fehlt:</h3>
+            <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+                <li>Direkte Trading-Anbindung zu APG oder EPEX Spot</li>
+                <li>Order-Übermittlung an externe Börsen</li>
+                <li>Fahrplanübermittlung an APG (EDIFACT/XML)</li>
+                <li>Clearing-Integration (z.B. ECC für EPEX)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Architektur -->
+    <div class="dark-card p-6 mb-6">
+        <h2 class="text-xl font-bold text-white mb-4">🎯 Lösungskonzept: Trading-Bridge-Service</h2>
+        
+        <div class="bg-gray-800 p-4 rounded-lg mb-4 font-mono text-sm text-gray-300">
+            <pre class="whitespace-pre-wrap">┌─────────────────┐
+│  WebApp/UI      │
+│  (Order Entry)  │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Exchange API   │ ← Internes Trading (aktuell)
+│  (Port 9000)    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  Trading Bridge Service             │
+│  - Order Routing                    │
+│  - Market Adapter (APG/EPEX)        │
+│  - Format Conversion (EDIFACT/XML) │
+└────────┬────────────────────────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌─────────┐ ┌──────────┐
+│   APG   │ │ EPEX Spot│
+│   API   │ │   API    │
+└─────────┘ └──────────┘</pre>
+        </div>
+    </div>
+
+    <!-- Voraussetzungen -->
+    <div class="dark-card p-6 mb-6">
+        <h2 class="text-xl font-bold text-white mb-4">📋 Voraussetzungen Checkliste</h2>
+        
+        <div class="mb-6">
+            <h3 class="text-lg font-semibold text-yellow-400 mb-3">EPEX Spot Trading:</h3>
+            <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+                <li>EPEX Spot Mitgliedschaft (Vertrag)</li>
+                <li>ECC Clearing-Teilnahme (European Commodity Clearing)</li>
+                <li>API Credentials (Username, Password, API Key)</li>
+                <li>Test-Umgebung Zugang</li>
+                <li>Bankverbindung für Margins</li>
+            </ul>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-semibold text-blue-400 mb-3">APG Trading:</h3>
+            <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+                <li>Marktteilnehmer-Registrierung bei E-Control</li>
+                <li>Bilanzgruppenvertrag mit APG</li>
+                <li>Marktpartner-ID (MPID)</li>
+                <li>AS4/ENTSO-E ECP Anbindung oder VPN</li>
+                <li>IT-System Zertifizierung</li>
+                <li>Testphase mit APG</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Konfiguration -->
+    <div class="dark-card p-6 mb-6">
+        <h2 class="text-xl font-bold text-white mb-4">🔐 Konfiguration</h2>
+        
+        <p class="text-gray-300 mb-4">Environment Variables für Docker Compose:</p>
+        <div class="bg-gray-800 p-4 rounded-lg font-mono text-sm text-gray-300">
+            <pre class="whitespace-pre-wrap"># EPEX Spot Credentials
+EPEX_USERNAME=your_username
+EPEX_PASSWORD=your_password
+EPEX_API_KEY=your_api_key
+EPEX_TEST_MODE=true  # für Test-Umgebung
+
+# APG Credentials
+APG_MPID=your_mpid
+APG_BILANZGRUPPE=your_bilanzgruppe
+APG_AS4_ENDPOINT=https://...
+
+# Trading Bridge Config
+BRIDGE_ENABLED=true
+DEFAULT_TARGET_EXCHANGE=INTERNAL  # oder EPEX_SPOT, APG</pre>
+        </div>
+    </div>
+
+    <!-- Wichtige Hinweise -->
+    <div class="dark-card p-6 bg-blue-900 bg-opacity-20 border-blue-500 mb-6">
+        <h2 class="text-xl font-bold text-blue-300 mb-4">⚠️ Wichtige Hinweise</h2>
+        <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+            <li>Test-Umgebung: Zuerst in Test-Umgebungen testen</li>
+            <li>Zertifizierung: APG/EPEX erfordern oft technische Zertifizierung</li>
+            <li>Compliance: Regulatorische Anforderungen beachten</li>
+            <li>Fehlerbehandlung: Robuste Error-Handling für API-Ausfälle</li>
+            <li>Monitoring: Umfassendes Logging und Monitoring</li>
+        </ul>
+    </div>
+
+    <!-- Weitere Ressourcen -->
+    <div class="dark-card p-6">
+        <h2 class="text-xl font-bold text-white mb-4">📚 Weitere Ressourcen</h2>
+        <ul class="list-disc list-inside text-gray-300 space-y-2 ml-4">
+            <li><strong>APG Marktzugang</strong>: Siehe <code class="text-blue-400">Marktzugang/APG_Marktzugang_Österreich.md</code></li>
+            <li><strong>EPEX Spot API</strong>: <a href="https://www.epexspot.com/en/platforms/api" target="_blank" class="text-blue-400 hover:underline">https://www.epexspot.com/en/platforms/api</a></li>
+            <li><strong>ENTSO-E ECP</strong>: <a href="https://www.entsoe.eu/network_codes/ecp/" target="_blank" class="text-blue-400 hover:underline">https://www.entsoe.eu/network_codes/ecp/</a></li>
+            <li><strong>EDIFACT Standards</strong>: APG Dokumentation</li>
+        </ul>
+    </div>
+
+    <!-- Status -->
+    <div class="mt-6 text-center">
+        <div class="inline-block bg-yellow-900 bg-opacity-30 border border-yellow-500 rounded-lg px-6 py-3">
+            <p class="text-yellow-300">
+                <strong>Status</strong>: 🟡 Konzept-Phase<br>
+                <span class="text-sm">Nächste Schritte: Implementierung nach Verfügbarkeit der Credentials</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <div class="mt-6 text-center">
+        <a href="/trading-config" class="inline-block shimmer-button px-6 py-2 rounded-md">
+            <i class="fas fa-arrow-left mr-2"></i>Zurück zur Konfiguration
+        </a>
+    </div>
+</div>
+{% endblock %}
+

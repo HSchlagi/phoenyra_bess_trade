@@ -142,6 +142,20 @@
                         <option value="EPEX_AT_INTRADAY_15MIN">EPEX AT Intraday</option>
                     </select>
                 </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">
+                        <i class="fas fa-exchange-alt mr-1"></i>Trading-Plattform
+                    </label>
+                    <select name="target_exchange" id="target-exchange" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <option value="INTERNAL">🏠 Interner Exchange</option>
+                        <option value="EPEX_SPOT">⚡ EPEX Spot</option>
+                        <option value="APG">🔌 APG</option>
+                    </select>
+                    <p class="text-xs text-gray-400 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Externe Plattformen erfordern Marktteilnehmer-Registrierung und Credentials
+                    </p>
+                </div>
                 <button type="submit" class="shimmer-button w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium">
                     <i class="fas fa-paper-plane mr-2"></i>Order erstellen
                 </button>
@@ -271,67 +285,136 @@
         }
 
         updateMarketData(data) {
-            // Update charts with new data
-            if (this.priceChart) {
-                this.priceChart.updateSeries([{
-                    data: [data.mark, data.ema, data.vwap]
-                }]);
+            const now = new Date().getTime();
+            
+            // Parse and validate prices
+            const mark = parseFloat(data.mark);
+            const ema = parseFloat(data.ema);
+            const vwap = parseFloat(data.vwap);
+            
+            // Only add valid prices (> 0) to history
+            if (mark > 0 && mark < 1000) {  // Reasonable range check
+                this.priceHistory.push({
+                    timestamp: now,
+                    mark: mark,
+                    ema: isNaN(ema) || ema <= 0 ? mark : ema,
+                    vwap: isNaN(vwap) || vwap <= 0 ? mark : vwap
+                });
             }
             
-            if (this.vwapChart) {
-                // Generate time series data
-                const seriesData = [];
-                const now = new Date();
+            // Keep only last maxHistoryPoints
+            if (this.priceHistory.length > this.maxHistoryPoints) {
+                this.priceHistory.shift();
+            }
+            
+            // Update price chart with time series
+            if (this.priceChart) {
+                const markData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.mark }));
+                const emaData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.ema }));
+                const vwapData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.vwap }));
                 
-                for (let i = 14; i >= 0; i--) {
-                    const time = new Date(now.getTime() - i * 60000);
-                    seriesData.push({
-                        x: time.getTime(),
-                        y: data.vwap + (Math.random() - 0.5) * 2
-                    });
-                }
+                this.priceChart.updateSeries([
+                    { name: 'Mark Preis', data: markData },
+                    { name: 'EMA', data: emaData },
+                    { name: 'VWAP', data: vwapData }
+                ], false, true);
+            }
+            
+            // Update VWAP chart
+            if (this.vwapChart) {
+                const vwapSeriesData = this.priceHistory.map(p => ({
+                    x: p.timestamp,
+                    y: p.vwap
+                }));
                 
                 this.vwapChart.updateSeries([{
-                    data: seriesData
-                }]);
+                    name: 'VWAP (€/MWh)',
+                    data: vwapSeriesData
+                }], false, true);
+            }
+            
+            // Update price display values
+            if (document.getElementById('market-mark')) {
+                document.getElementById('market-mark').textContent = data.mark.toFixed(2);
+            }
+            if (document.getElementById('market-ema')) {
+                document.getElementById('market-ema').textContent = data.ema.toFixed(2);
+            }
+            if (document.getElementById('market-vwap')) {
+                document.getElementById('market-vwap').textContent = data.vwap.toFixed(2);
             }
         }
 
         initializeCharts() {
-            // Initialize Price Chart with ApexCharts
+            // Initialize Price History storage
+            this.priceHistory = [];
+            this.maxHistoryPoints = 60; // Last 60 data points (10 minutes at 10s intervals)
+            
+            // Initialize Price Chart as time series with ApexCharts
             const priceOptions = {
-                series: [{
-                    name: 'Preise (€/MWh)',
-                    data: [85.50, 84.20, 85.10]
-                }],
+                series: [
+                    {
+                        name: 'Mark Preis',
+                        data: []
+                    },
+                    {
+                        name: 'EMA',
+                        data: []
+                    },
+                    {
+                        name: 'VWAP',
+                        data: []
+                    }
+                ],
                 chart: {
                     type: 'line',
                     height: 250,
                     background: 'transparent',
                     toolbar: {
-                        show: false
+                        show: true,
+                        tools: {
+                            download: true,
+                            zoom: true,
+                            pan: true
+                        }
+                    },
+                    zoom: {
+                        enabled: true,
+                        type: 'x'
                     }
                 },
                 stroke: {
                     curve: 'smooth',
-                    width: 3,
-                    colors: ['#00FF00']
+                    width: [3, 2, 2],
+                    colors: ['#00FF00', '#00FF88', '#88FF00']
                 },
-                colors: ['#00FF00'],
+                colors: ['#00FF00', '#00FF88', '#88FF00'],
                 markers: {
-                    size: 0
+                    size: [4, 3, 3],
+                    hover: {
+                        size: 6
+                    }
                 },
                 fill: {
-                    type: 'solid',
-                    colors: ['#00FF00'],
-                    opacity: 0.1
+                    type: 'gradient',
+                    gradient: {
+                        shade: 'dark',
+                        type: 'vertical',
+                        shadeIntensity: 0.3,
+                        gradientToColors: ['#00AA00'],
+                        inverseColors: false,
+                        opacityFrom: 0.4,
+                        opacityTo: 0.1
+                    }
                 },
                 xaxis: {
-                    categories: ['Mark', 'EMA', 'VWAP'],
+                    type: 'datetime',
                     labels: {
                         style: {
                             colors: '#ffffff'
-                        }
+                        },
+                        datetimeUTC: false,
+                        format: 'HH:mm:ss'
                     }
                 },
                 yaxis: {
@@ -504,33 +587,67 @@
             // Order Form Handler - Form now submits normally to /order
 
             // Telemetry Form Handler
-            document.getElementById('telemetryForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                
-                const formData = new FormData(e.target);
-                const telemetryData = {
-                    soc_percent: parseFloat(formData.get('soc_percent')),
-                    active_power: parseFloat(formData.get('active_power')),
-                    temperature: parseFloat(formData.get('temperature'))
-                };
-                
-                // Send telemetry to backend
-                fetch('/api/telemetry', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(telemetryData)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Telemetry sent:', data);
-                    e.target.reset();
-                })
-                .catch(error => {
-                    console.error('Error sending telemetry:', error);
+            const telemetryForm = document.getElementById('telemetryForm');
+            if (telemetryForm) {
+                telemetryForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const submitButton = e.target.querySelector('button[type="submit"]');
+                    const originalText = submitButton.innerHTML;
+                    
+                    // Disable button and show loading
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Senden...';
+                    
+                    try {
+                        const formData = new FormData(e.target);
+                        const telemetryData = {
+                            soc_percent: parseFloat(formData.get('soc_percent')) || 0,
+                            active_power: parseFloat(formData.get('active_power')) || 0,
+                            temperature: parseFloat(formData.get('temperature')) || 0
+                        };
+                        
+                        // Validate input
+                        if (!telemetryData.soc_percent && !telemetryData.active_power && !telemetryData.temperature) {
+                            alert('Bitte geben Sie mindestens einen Wert ein!');
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalText;
+                            return;
+                        }
+                        
+                        // Send telemetry to backend
+                        const response = await fetch('/api/telemetry', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(telemetryData)
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (response.ok && !data.error) {
+                            // Success
+                            alert(`Telemetrie erfolgreich gesendet!\nSoC: ${telemetryData.soc_percent}%\nLeistung: ${telemetryData.active_power} MW\nTemperatur: ${telemetryData.temperature}°C`);
+                            e.target.reset();
+                            // Reload BESS status to show new values
+                            this.loadInitialData();
+                        } else {
+                            // Error
+                            alert('Fehler beim Senden der Telemetrie: ' + (data.error || 'Unbekannter Fehler'));
+                        }
+                    } catch (error) {
+                        console.error('Error sending telemetry:', error);
+                        alert('Fehler beim Senden der Telemetrie: ' + error.message);
+                    } finally {
+                        // Re-enable button
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalText;
+                    }
                 });
-            });
+            } else {
+                console.error('Telemetry form not found!');
+            }
         }
 
         startAutoUpdate() {
