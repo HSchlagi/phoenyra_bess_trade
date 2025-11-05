@@ -95,11 +95,27 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Price Chart -->
         <div class="dark-card p-6" id="trading">
-            <h3 class="text-lg leading-6 font-medium text-white mb-4">
-                <i class="fas fa-chart-line mr-2 text-blue-400"></i>Marktpreise
-            </h3>
-            <p class="text-xs text-gray-400 mb-2">EPEX Spot Day-Ahead Preise (Österreich) via ENTSO-E</p>
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-white">
+                        <i class="fas fa-chart-line mr-2 text-blue-400"></i>Marktpreise
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-1">EPEX Spot Day-Ahead Preise (Österreich) via <span style="white-space: nowrap;">ENTSO-E</span></p>
+                </div>
+                <div class="flex gap-2">
+                    <button id="exportChartBtn" class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors" title="Export Chart Data">
+                        <i class="fas fa-download mr-1"></i>Export
+                    </button>
+                    <button id="resetChartBtn" class="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-md transition-colors" title="Chart zurücksetzen">
+                        <i class="fas fa-redo mr-1"></i>Reset
+                    </button>
+                    <button id="chartSettingsBtn" class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors" title="Chart-Einstellungen">
+                        <i class="fas fa-cog mr-1"></i>Einstellungen
+                    </button>
+                </div>
+            </div>
             <div id="priceChart" class="h-64"></div>
+            <div id="chartStatus" class="text-xs text-gray-500 mt-2"></div>
         </div>
 
         <!-- VWAP Chart -->
@@ -223,13 +239,60 @@
     class DashboardData {
         constructor() {
             this.updateInterval = 10000; // 10 seconds
+            this.syncInterval = 60000; // 1 minute - sync with server
+            this.market = 'epex_at';
+            this.lastSync = 0;
+            this.syncEnabled = true;
+            this.loadSettings();
             this.init();
+        }
+
+        loadSettings() {
+            // Load user settings from localStorage
+            try {
+                const settings = JSON.parse(localStorage.getItem('phoenyra_chart_settings') || '{}');
+                this.maxHistoryPoints = settings.maxHistoryPoints || 360;
+                this.maxHistoryAge = (settings.maxHistoryHours || 1) * 60 * 60 * 1000;
+                this.autoSync = settings.autoSync !== false; // default true
+                this.autoPlay = settings.autoPlay !== false; // default true
+            } catch (e) {
+                this.maxHistoryPoints = 360;
+                this.maxHistoryAge = 60 * 60 * 1000;
+                this.autoSync = true;
+                this.autoPlay = true;
+            }
+        }
+
+        saveSettings() {
+            const settings = {
+                maxHistoryPoints: this.maxHistoryPoints,
+                maxHistoryHours: this.maxHistoryAge / (60 * 60 * 1000),
+                autoSync: this.autoSync,
+                autoPlay: this.autoPlay
+            };
+            localStorage.setItem('phoenyra_chart_settings', JSON.stringify(settings));
         }
 
         async init() {
             this.initializeCharts();
+            // Wait for charts to render, then restore saved data
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Load from localStorage first
+            if (this.priceHistory.length > 0) {
+                this.restoreChartFromHistory();
+            }
+            
+            // Sync with server if enabled
+            if (this.autoSync) {
+                await this.syncWithServer();
+            }
+            
             await this.loadInitialData();
             this.startAutoUpdate();
+            if (this.autoSync) {
+                this.startServerSync();
+            }
             this.setupEventListeners();
         }
 
@@ -294,6 +357,13 @@
             
             // Only add valid prices (> 0) to history
             if (mark > 0 && mark < 1000) {  // Reasonable range check
+                // Remove duplicate timestamps (same second) to avoid duplicates
+                const currentSecond = Math.floor(now / 1000) * 1000;
+                this.priceHistory = this.priceHistory.filter(p => 
+                    Math.floor(p.timestamp / 1000) * 1000 !== currentSecond
+                );
+                
+                // Add new data point
                 this.priceHistory.push({
                     timestamp: now,
                     mark: mark,
@@ -302,10 +372,11 @@
                 });
             }
             
-            // Keep only last maxHistoryPoints
-            if (this.priceHistory.length > this.maxHistoryPoints) {
-                this.priceHistory.shift();
-            }
+            // Clean up old data
+            this.cleanupHistory();
+            
+            // Persist to localStorage
+            this.savePriceHistory();
             
             // Update price chart with time series
             if (this.priceChart) {
@@ -314,9 +385,9 @@
                 const vwapData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.vwap }));
                 
                 this.priceChart.updateSeries([
-                    { name: 'Mark Preis', data: markData },
-                    { name: 'EMA', data: emaData },
-                    { name: 'VWAP', data: vwapData }
+                    { name: 'Markt Preis', data: markData },
+                    { name: 'EMA (Exponential Moving Average)', data: emaData },
+                    { name: 'VWAP (Volume-Weighted Average Price)', data: vwapData }
                 ], false, true);
             }
             
@@ -346,23 +417,24 @@
         }
 
         initializeCharts() {
-            // Initialize Price History storage
-            this.priceHistory = [];
-            this.maxHistoryPoints = 60; // Last 60 data points (10 minutes at 10s intervals)
+            // Initialize Price History storage with localStorage persistence
+            this.maxHistoryPoints = 360; // Last 360 data points (1 hour at 10s intervals)
+            this.maxHistoryAge = 60 * 60 * 1000; // 1 hour in milliseconds
+            this.priceHistory = this.loadPriceHistory();
             
             // Initialize Price Chart as time series with ApexCharts
             const priceOptions = {
                 series: [
                     {
-                        name: 'Mark Preis',
+                        name: 'Markt Preis',
                         data: []
                     },
                     {
-                        name: 'EMA',
+                        name: 'EMA (Exponential Moving Average)',
                         data: []
                     },
                     {
-                        name: 'VWAP',
+                        name: 'VWAP (Volume-Weighted Average Price)',
                         data: []
                     }
                 ],
@@ -443,8 +515,53 @@
                     }
                 },
                 legend: {
+                    show: true,
+                    showForSingleSeries: false,
+                    showForNullSeries: true,
+                    showForZeroSeries: true,
+                    position: 'bottom',
+                    horizontalAlign: 'left',
+                    floating: false,
+                    fontSize: '11px',
+                    fontFamily: 'inherit',
+                    fontWeight: 400,
+                    formatter: undefined,
+                    inverseOrder: false,
+                    width: 300,
+                    height: undefined,
+                    tooltipHoverFormatter: undefined,
+                    customLegendItems: [],
+                    offsetX: 0,
+                    offsetY: 5,
                     labels: {
-                        colors: '#ffffff'
+                        colors: '#ffffff',
+                        useSeriesColors: false
+                    },
+                    markers: {
+                        width: 10,
+                        height: 10,
+                        strokeWidth: 0,
+                        strokeColor: '#fff',
+                        fillColors: undefined,
+                        radius: 5,
+                        customHTML: undefined,
+                        onClick: undefined,
+                        offsetX: 0,
+                        offsetY: 0
+                    },
+                    itemMargin: {
+                        horizontal: 10,
+                        vertical: 5
+                    },
+                    containerMargin: {
+                        left: 0,
+                        top: 0
+                    },
+                    onItemClick: {
+                        toggleDataSeries: true
+                    },
+                    onItemHover: {
+                        highlightDataSeries: true
                     }
                 }
             };
@@ -584,6 +701,36 @@
         }
 
         setupEventListeners() {
+            // Export button
+            const exportBtn = document.getElementById('exportChartBtn');
+            if (exportBtn) {
+                exportBtn.addEventListener('click', () => {
+                    // Show export menu
+                    const format = prompt('Export-Format:\n1 = JSON\n2 = CSV\n\nBitte wählen (1 oder 2):', '1');
+                    if (format === '1') {
+                        this.exportChartData('json');
+                    } else if (format === '2') {
+                        this.exportChartData('csv');
+                    }
+                });
+            }
+
+            // Reset button
+            const resetBtn = document.getElementById('resetChartBtn');
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                    this.resetChart();
+                });
+            }
+
+            // Settings button
+            const settingsBtn = document.getElementById('chartSettingsBtn');
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', () => {
+                    this.showSettingsDialog();
+                });
+            }
+
             // Order Form Handler - Form now submits normally to /order
 
             // Telemetry Form Handler
@@ -664,6 +811,261 @@
                     console.error('Error updating data:', error);
                 }
             }, this.updateInterval);
+        }
+
+        startServerSync() {
+            setInterval(async () => {
+                if (this.autoSync) {
+                    await this.syncWithServer();
+                }
+            }, this.syncInterval);
+        }
+
+        async syncWithServer() {
+            try {
+                const response = await fetch('/api/market/history/sync', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        market: this.market,
+                        client_history: this.priceHistory,
+                        last_sync: this.lastSync
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.history && data.history.length > 0) {
+                    // Merge server history with local
+                    const serverTimestamps = new Set(this.priceHistory.map(p => p.timestamp));
+                    data.history.forEach(point => {
+                        if (!serverTimestamps.has(point.timestamp)) {
+                            this.priceHistory.push({
+                                timestamp: point.timestamp,
+                                mark: point.mark,
+                                ema: point.ema,
+                                vwap: point.vwap
+                            });
+                        }
+                    });
+                    
+                    // Clean and sort
+                    this.cleanupHistory();
+                    this.priceHistory.sort((a, b) => a.timestamp - b.timestamp);
+                    this.savePriceHistory();
+                    this.restoreChartFromHistory();
+                    
+                    this.updateChartStatus(`Synced: +${data.count} points from server`);
+                }
+                
+                this.lastSync = data.synced_at || Date.now();
+            } catch (error) {
+                console.warn('Error syncing with server:', error);
+                this.updateChartStatus('Server sync failed - using local data only');
+            }
+        }
+
+        cleanupHistory() {
+            const now = Date.now();
+            const cutoffTime = now - this.maxHistoryAge;
+            this.priceHistory = this.priceHistory.filter(p => p.timestamp >= cutoffTime);
+            
+            if (this.priceHistory.length > this.maxHistoryPoints) {
+                this.priceHistory = this.priceHistory.slice(-this.maxHistoryPoints);
+            }
+        }
+
+        updateChartStatus(message) {
+            const statusEl = document.getElementById('chartStatus');
+            if (statusEl) {
+                statusEl.textContent = message;
+                setTimeout(() => {
+                    if (statusEl.textContent === message) {
+                        statusEl.textContent = '';
+                    }
+                }, 3000);
+            }
+        }
+
+        exportChartData(format = 'json') {
+            const data = {
+                market: this.market,
+                exported_at: new Date().toISOString(),
+                count: this.priceHistory.length,
+                history: this.priceHistory
+            };
+            
+            if (format === 'json') {
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `phoenyra_market_data_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } else if (format === 'csv') {
+                // CSV format
+                const csv = [
+                    'timestamp,mark,ema,vwap',
+                    ...this.priceHistory.map(p => 
+                        `${p.timestamp},${p.mark},${p.ema},${p.vwap}`
+                    )
+                ].join('\n');
+                
+                const blob = new Blob([csv], {type: 'text/csv'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `phoenyra_market_data_${Date.now()}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+            
+            this.updateChartStatus(`Data exported as ${format.toUpperCase()}`);
+        }
+
+        resetChart() {
+            if (confirm('Möchten Sie wirklich alle Chart-Daten zurücksetzen? Dies kann nicht rückgängig gemacht werden.')) {
+                this.priceHistory = [];
+                this.lastSync = 0;
+                localStorage.removeItem('phoenyra_price_history');
+                this.restoreChartFromHistory();
+                this.updateChartStatus('Chart zurückgesetzt');
+            }
+        }
+
+        // Restore chart from saved history
+        restoreChartFromHistory() {
+            if (this.priceHistory.length > 0 && this.priceChart) {
+                const markData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.mark }));
+                const emaData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.ema }));
+                const vwapData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.vwap }));
+                
+                this.priceChart.updateSeries([
+                    { name: 'Markt Preis', data: markData },
+                    { name: 'EMA (Exponential Moving Average)', data: emaData },
+                    { name: 'VWAP (Volume-Weighted Average Price)', data: vwapData }
+                ], false, true);
+            }
+            
+            if (this.priceHistory.length > 0 && this.vwapChart) {
+                const vwapSeriesData = this.priceHistory.map(p => ({
+                    x: p.timestamp,
+                    y: p.vwap
+                }));
+                
+                this.vwapChart.updateSeries([{
+                    name: 'VWAP (€/MWh)',
+                    data: vwapSeriesData
+                }], false, true);
+            }
+        }
+
+        // localStorage persistence methods
+        loadPriceHistory() {
+            try {
+                const stored = localStorage.getItem('phoenyra_price_history');
+                if (stored) {
+                    const history = JSON.parse(stored);
+                    const now = new Date().getTime();
+                    const cutoffTime = now - this.maxHistoryAge;
+                    // Filter out old data
+                    return history.filter(p => p.timestamp >= cutoffTime);
+                }
+            } catch (error) {
+                console.warn('Error loading price history from localStorage:', error);
+            }
+            return [];
+        }
+
+        savePriceHistory() {
+            try {
+                localStorage.setItem('phoenyra_price_history', JSON.stringify(this.priceHistory));
+            } catch (error) {
+                console.warn('Error saving price history to localStorage:', error);
+                // If localStorage is full, try to reduce history size
+                if (error.name === 'QuotaExceededError') {
+                    this.priceHistory = this.priceHistory.slice(-this.maxHistoryPoints / 2);
+                    try {
+                        localStorage.setItem('phoenyra_price_history', JSON.stringify(this.priceHistory));
+                    } catch (e) {
+                        console.error('Failed to save reduced history:', e);
+                    }
+                }
+            }
+        }
+
+        showSettingsDialog() {
+            const hours = this.maxHistoryAge / (60 * 60 * 1000);
+            const maxPoints = this.maxHistoryPoints;
+            
+            const html = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" id="settingsModal">
+                    <div class="bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+                        <h3 class="text-lg font-bold text-white mb-4">
+                            <i class="fas fa-cog mr-2"></i>Chart-Einstellungen
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">
+                                    Historie-Dauer (Stunden)
+                                </label>
+                                <input type="number" id="historyHours" value="${hours}" min="0.5" max="24" step="0.5" 
+                                       class="w-full bg-gray-700 border-gray-600 text-white rounded-md px-3 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-2">
+                                    Maximale Datenpunkte
+                                </label>
+                                <input type="number" id="maxPoints" value="${maxPoints}" min="60" max="7200" step="60" 
+                                       class="w-full bg-gray-700 border-gray-600 text-white rounded-md px-3 py-2">
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="autoSync" ${this.autoSync ? 'checked' : ''} 
+                                       class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded">
+                                <label class="ml-2 text-sm text-gray-300">Automatische Server-Synchronisation</label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="autoPlay" ${this.autoPlay ? 'checked' : ''} 
+                                       class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded">
+                                <label class="ml-2 text-sm text-gray-300">Automatisches Update aktivieren</label>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-6">
+                            <button id="saveSettings" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md">
+                                Speichern
+                            </button>
+                            <button id="cancelSettings" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md">
+                                Abbrechen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', html);
+            
+            document.getElementById('saveSettings').addEventListener('click', () => {
+                const hours = parseFloat(document.getElementById('historyHours').value);
+                const maxPoints = parseInt(document.getElementById('maxPoints').value);
+                const autoSync = document.getElementById('autoSync').checked;
+                const autoPlay = document.getElementById('autoPlay').checked;
+                
+                this.maxHistoryAge = hours * 60 * 60 * 1000;
+                this.maxHistoryPoints = maxPoints;
+                this.autoSync = autoSync;
+                this.autoPlay = autoPlay;
+                
+                this.saveSettings();
+                this.cleanupHistory();
+                this.restoreChartFromHistory();
+                
+                document.getElementById('settingsModal').remove();
+                this.updateChartStatus('Einstellungen gespeichert');
+            });
+            
+            document.getElementById('cancelSettings').addEventListener('click', () => {
+                document.getElementById('settingsModal').remove();
+            });
         }
     }
 

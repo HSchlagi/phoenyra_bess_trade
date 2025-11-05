@@ -130,6 +130,41 @@ def get_market_data():
             "timestamp": datetime.now().isoformat()
         }
 
+@app.route('/api/market/history')
+def get_market_history():
+    """Get market price history from server"""
+    try:
+        market = request.args.get('market', 'epex_at')
+        hours = int(request.args.get('hours', 1))
+        limit = int(request.args.get('limit', 360))
+        
+        response = requests.get(
+            f"{EXCHANGE_BASE_URL}/market/history",
+            params={'market': market, 'hours': hours, 'limit': limit}
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"market": market, "count": 0, "history": []}
+    except Exception as e:
+        return {"market": market, "count": 0, "history": [], "error": str(e)}
+
+@app.route('/api/market/history/sync', methods=['POST'])
+def sync_market_history():
+    """Sync client history with server"""
+    try:
+        data = request.get_json()
+        response = requests.post(
+            f"{EXCHANGE_BASE_URL}/market/history/sync",
+            json=data
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"market": data.get('market', 'epex_at'), "count": 0, "history": []}
+    except Exception as e:
+        return {"market": data.get('market', 'epex_at'), "count": 0, "history": [], "error": str(e)}
+
 @app.route('/api/orders')
 def get_orders():
     """Get active orders"""

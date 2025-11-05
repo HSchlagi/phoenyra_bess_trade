@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatisierter Handel - Phoenyra BESS Trade System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 50%, #0f0f0f 100%);
+            min-height: 100vh;
+            color: #e5e7eb;
+        }
+        
+        .dark-card {
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.95) 0%, rgba(45, 55, 72, 0.95) 100%);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            color: #ffd700;
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+        }
+        
+        h2 {
+            color: #ffd700;
+            font-size: 1.75rem;
+            font-weight: bold;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            padding-bottom: 0.5rem;
+        }
+        
+        h3 {
+            color: #fbbf24;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        h4 {
+            color: #fcd34d;
+            font-size: 1.25rem;
+            font-weight: bold;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        code {
+            background: rgba(0, 0, 0, 0.5);
+            color: #10b981;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        
+        pre code {
+            background: transparent;
+            color: #e5e7eb;
+            padding: 0;
+        }
+        
+        ul, ol {
+            margin-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+            line-height: 1.6;
+        }
+        
+        hr {
+            border: none;
+            border-top: 1px solid rgba(255, 215, 0, 0.3);
+            margin: 2rem 0;
+        }
+        
+        .emoji {
+            font-size: 1.2em;
+            margin-right: 0.5rem;
+        }
+        
+        .highlight {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+        }
+        
+        .diagram {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 8px;
+            padding: 1.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.8;
+            white-space: pre;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="dark-card">
+            <h1><span class="emoji">📊</span>Automatisierter Handel im Phoenyra BESS Trade System</h1>
+            
+            <h2><span class="emoji">📊</span>Übersicht</h2>
+            <p class="mb-4 text-gray-300 leading-relaxed">
+                Das Phoenyra BESS Trade System implementiert einen vollautomatisierten Handel für Battery Energy Storage Systems (BESS). 
+                Das System ermöglicht es, automatisch Strom zu kaufen und zu verkaufen, basierend auf Marktpreisen, BESS-Status und konfigurierten Strategien.
+            </p>
+            
+            <hr>
+            
+            <h2><span class="emoji">🔄</span>Ablauf des automatisierten Handels</h2>
+            
+            <h3>1. <strong>Marktdaten-Abruf</strong> (Kontinuierlich)</h3>
+            
+            <p class="mb-2 text-gray-300"><strong>Was passiert:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Alle 5 Minuten werden aktuelle Marktpreise von EPEX Spot (via ENTSO-E Transparency Platform) abgerufen</li>
+                <li>Die Preise werden in EUR/MWh konvertiert und gespeichert</li>
+                <li>Berechnung von:
+                    <ul class="list-disc ml-6 mt-2">
+                        <li><strong>Mark Preis</strong>: Aktueller Marktpreis</li>
+                        <li><strong>EMA</strong> (Exponential Moving Average): Exponentieller gleitender Durchschnitt</li>
+                        <li><strong>VWAP</strong> (Volume-Weighted Average Price): Volumengewichteter Durchschnittspreis</li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>Technische Details:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li><strong>Service:</strong> <code>market-feed</code> Container</li>
+                <li><strong>Update-Intervall:</strong> 300 Sekunden (5 Minuten)</li>
+                <li><strong>Datenquelle:</strong> ENTSO-E API (A44 Document Type)</li>
+                <li><strong>Markt:</strong> EPEX AT Day-Ahead (Österreich)</li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>Speicherung:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li><strong>Redis:</strong> Aktuelle Preise für schnellen Zugriff</li>
+                <li><strong>SQLite:</strong> Historische Preisdaten für Analyse und Chart-Darstellung</li>
+            </ul>
+            
+            <hr>
+            
+            <h3>2. <strong>Order-Erstellung</strong> (Manuell oder Automatisch)</h3>
+            
+            <p class="mb-2 text-gray-300"><strong>Manuelle Order-Erstellung:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Benutzer erstellt Order über Web-Dashboard</li>
+                <li>Eingabe: Menge (MWh), Preis (EUR/MWh), Seite (BUY/SELL), Markt</li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>Automatische Order-Erstellung:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Zukünftig: Automatische Strategien basierend auf:
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Preisprognosen (Forecast API)</li>
+                        <li>BESS-SoC (State of Charge)</li>
+                        <li>Netzfrequenz (Grid API)</li>
+                        <li>Risk-Limits (Risk API)</li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>Order-Validierung:</strong></p>
+            <pre><code># SoC-basierte Schutzfunktionen
+if side == "BUY" and SoC < 15%:
+    → Order wird abgelehnt (Batterie zu leer)
+    
+if side == "SELL" and SoC > 90%:
+    → Order wird abgelehnt (Batterie zu voll)</code></pre>
+            
+            <p class="mb-2 text-gray-300"><strong>Throttling:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Rate-Limiting pro Markt (z.B. 120 Orders/Minute)</li>
+                <li>Skalierung basierend auf BESS-Temperatur (ab 40°C: 50% Reduktion)</li>
+            </ul>
+            
+            <hr>
+            
+            <h3>3. <strong>Matching-Engine</strong> (Automatisch, sofort)</h3>
+            
+            <p class="mb-2 text-gray-300"><strong>Was passiert:</strong></p>
+            <p class="text-gray-300 mb-4">
+                Sobald eine Order erstellt wird, startet automatisch die Matching-Engine:
+            </p>
+            
+            <pre><code># Pseudocode
+Order wird gespeichert → Status: "ACCEPTED"
+→ Matching-Engine wird getriggert
+→ Suche nach kompatiblen Gegenorders
+→ Wenn gefunden: Trade wird sofort ausgeführt</code></pre>
+            
+            <p class="mb-2 text-gray-300"><strong>Matching-Logik:</strong></p>
+            
+            <h4>Für <strong>BUY-Orders</strong> (Kauf):</h4>
+            <ol class="list-decimal text-gray-300 mb-4">
+                <li><strong>Suche nach:</strong> SELL-Orders im selben Markt</li>
+                <li><strong>Bedingung:</strong> <code>SELL-Preis ≤ BUY-Limit-Preis</code></li>
+                <li><strong>Sortierung:</strong> 
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Günstigste SELL-Orders zuerst</li>
+                        <li>Bei gleichem Preis: Älteste zuerst (First-Come-First-Served)</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h4>Für <strong>SELL-Orders</strong> (Verkauf):</h4>
+            <ol class="list-decimal text-gray-300 mb-4">
+                <li><strong>Suche nach:</strong> BUY-Orders im selben Markt</li>
+                <li><strong>Bedingung:</strong> <code>BUY-Preis ≥ SELL-Limit-Preis</code></li>
+                <li><strong>Sortierung:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Teuerste BUY-Orders zuerst</li>
+                        <li>Bei gleichem Preis: Älteste zuerst</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <p class="mb-2 text-gray-300"><strong>Beispiel:</strong></p>
+            <pre><code>Order 1: BUY 1.0 MWh @ 40 EUR/MWh
+Order 2: SELL 0.5 MWh @ 39 EUR/MWh
+
+→ Matching: ✅ Kompatibel (40 ≥ 39)
+→ Trade: 0.5 MWh @ 39.5 EUR/MWh (Durchschnitt)
+→ Order 1: 50% gefüllt, Order 2: 100% gefüllt</code></pre>
+            
+            <hr>
+            
+            <h3>4. <strong>Trade-Ausführung</strong> (Automatisch, atomar)</h3>
+            
+            <p class="mb-2 text-gray-300"><strong>Schritte bei einem Match:</strong></p>
+            
+            <p class="mb-2 text-gray-300"><strong>1. Volumen-Berechnung:</strong></p>
+            <pre><code>trade_qty = min(neue_order_verfügbar, match_order_verfügbar)</code></pre>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Nimmt das Minimum beider verfügbaren Mengen</li>
+                <li>Teilausführungen sind möglich</li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>2. Preis-Berechnung:</strong></p>
+            <pre><code>trade_price = (limit_price_neue_order + limit_price_match_order) / 2.0</code></pre>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Durchschnitt beider Limit-Preise</li>
+                <li>Fair für beide Seiten</li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>3. Datenbank-Update:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Trade wird in <code>trades</code>-Tabelle gespeichert</li>
+                <li>Beide Orders: <code>filled</code>-Wert wird erhöht</li>
+                <li>Wenn <code>filled >= qty</code>: Status → "FILLED"</li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>4. Echtzeit-Benachrichtigung:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>WebSocket-Event an alle verbundenen Clients</li>
+                <li>Dashboard wird sofort aktualisiert</li>
+                <li>Trade erscheint in "Letzte Trades"</li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>Transaktionssicherheit:</strong></p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Alle Schritte werden atomar ausgeführt</li>
+                <li>Entweder vollständig oder gar nicht</li>
+                <li>Keine verlorenen Orders oder Inkonsistenzen</li>
+            </ul>
+            
+            <hr>
+            
+            <h3>5. <strong>Externe Börsen-Integration</strong> (Optional)</h3>
+            
+            <p class="mb-2 text-gray-300"><strong>Trading Bridge Service:</strong></p>
+            <p class="text-gray-300 mb-4">
+                Das System kann Orders auch an externe Börsen weiterleiten:
+            </p>
+            
+            <h4><strong>EPEX Spot:</strong></h4>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Direkte Integration mit EPEX Spot API</li>
+                <li>Erfordert: Marktteilnehmer-Registrierung, ECC Clearing</li>
+                <li>Order-Übermittlung in Echtzeit</li>
+            </ul>
+            
+            <h4><strong>APG (Austrian Power Grid):</strong></h4>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>Fahrplanübermittlung an APG</li>
+                <li>Format: EDIFACT/XML</li>
+                <li>Erfordert: Bilanzgruppenvertrag, MPID, AS4-Anbindung</li>
+            </ul>
+            
+            <p class="mb-2 text-gray-300"><strong>Routing:</strong></p>
+            <div class="diagram">Dashboard → Order-Formular
+    ↓
+    └─→ Trading Bridge Service
+            ↓
+    ┌───────┴────────┐
+    │                │
+INTERNAL         EPEX_SPOT / APG
+Exchange        (Externe Börsen)</div>
+            
+            <hr>
+            
+            <h2><span class="emoji">🎯</span>Strategien und Automatisierung</h2>
+            
+            <h3>Aktuelle Automatisierung:</h3>
+            <ol class="list-decimal text-gray-300 mb-4">
+                <li><strong>Automatische Matching-Engine:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Jede Order wird sofort gematcht</li>
+                        <li>Keine manuelle Intervention nötig</li>
+                    </ul>
+                </li>
+                <li><strong>SoC-basierte Schutzfunktionen:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>BUY nur bei SoC ≥ 15%</li>
+                        <li>SELL nur bei SoC ≤ 90%</li>
+                        <li>Verhindert Über-/Unterladung</li>
+                    </ul>
+                </li>
+                <li><strong>Temperatur-basiertes Throttling:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Bei Temperaturen > 40°C: Reduktion der Order-Rate</li>
+                        <li>Schutz der Batterie vor Überhitzung</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>Zukünftige Automatisierungs-Möglichkeiten:</h3>
+            <ol class="list-decimal text-gray-300 mb-4">
+                <li><strong>Preis-basierte Strategien:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Automatisches Kaufen bei niedrigen Preisen</li>
+                        <li>Automatisches Verkaufen bei hohen Preisen</li>
+                        <li>Baseline: VWAP oder EMA als Referenz</li>
+                    </ul>
+                </li>
+                <li><strong>Forecast-basierte Strategien:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Nutzung von Day-Ahead Prognosen</li>
+                        <li>Optimierung basierend auf erwarteten Preisen</li>
+                        <li>Integration mit Forecast API</li>
+                    </ul>
+                </li>
+                <li><strong>Grid-basierte Strategien:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Reaktion auf Netzfrequenz</li>
+                        <li>Frequenz-Regelung (Primary/Secondary Reserve)</li>
+                        <li>Integration mit Grid API</li>
+                    </ul>
+                </li>
+                <li><strong>Risk-basierte Strategien:</strong>
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Begrenzung der Exposure basierend auf VaR</li>
+                        <li>Automatische Position-Limits</li>
+                        <li>Integration mit Risk API</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <hr>
+            
+            <h2><span class="emoji">📈</span>Datenfluss-Diagramm</h2>
+            <div class="diagram">┌─────────────────┐
+│  ENTSO-E API    │ (Marktdaten-Quelle)
+└────────┬────────┘
+         │ (alle 5 Min)
+         ▼
+┌─────────────────┐
+│  Market Feed    │ → Preise abrufen & speichern
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Exchange API   │ → Preise in Redis/SQLite
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌─────────┐ ┌─────────┐
+│ Dashboard│ │  Order │
+│ (Chart)  │ │ (Manuell│
+└─────────┘ └────┬────┘
+                 │
+                 ▼
+         ┌───────────────┐
+         │  Order API    │ → Validierung (SoC, Throttle)
+         └───────┬───────┘
+                 │
+                 ▼
+         ┌───────────────┐
+         │ Matching Engine│ → Suche nach Gegenorders
+         └───────┬───────┘
+                 │
+         ┌───────┴───────┐
+         │                │
+         ▼                ▼
+    ┌─────────┐      ┌─────────┐
+    │  Match  │      │  Match  │
+    │ gefunden│      │  nicht  │
+    └────┬────┘      │ gefunden│
+         │           └────┬────┘
+         │                │
+         ▼                ▼
+    ┌─────────┐      ┌─────────┐
+    │  Trade  │      │  Order  │
+    │ausgeführt│      │ wartet  │
+    └─────────┘      └─────────┘
+         │
+         ▼
+    ┌─────────┐
+    │WebSocket│ → Echtzeit-Update an Dashboard
+    └─────────┘</div>
+            
+            <hr>
+            
+            <h2><span class="emoji">🔧</span>Technische Komponenten</h2>
+            
+            <h3>Backend-Services:</h3>
+            <ol class="list-decimal text-gray-300 mb-4">
+                <li><strong>Exchange Service</strong> (<code>exchange/server.py</code>):
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>FastAPI-basierter Trading-Engine</li>
+                        <li>Matching-Engine-Implementierung</li>
+                        <li>Order- und Trade-Verwaltung</li>
+                        <li>WebSocket-Server für Echtzeit-Updates</li>
+                    </ul>
+                </li>
+                <li><strong>Market Feed Service</strong> (<code>exchange/market_feed.py</code>):
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Kontinuierlicher Abruf von Marktdaten</li>
+                        <li>ENTSO-E Integration</li>
+                        <li>Preis-Updates alle 5 Minuten</li>
+                    </ul>
+                </li>
+                <li><strong>Trading Bridge Service</strong> (<code>etrm/trading-bridge/</code>):
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Routing zu externen Börsen</li>
+                        <li>EPEX Spot Adapter</li>
+                        <li>APG Adapter</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>Datenbanken:</h3>
+            <ol class="list-decimal text-gray-300 mb-4">
+                <li><strong>SQLite</strong> (<code>exchange.db</code>):
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Orders: Alle Order-Einträge</li>
+                        <li>Trades: Alle ausgeführten Trades</li>
+                        <li>Market Price History: Historische Preisdaten</li>
+                    </ul>
+                </li>
+                <li><strong>Redis</strong>:
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Aktuelle Marktpreise (schneller Zugriff)</li>
+                        <li>Throttling-Zähler</li>
+                        <li>BESS-Telemetrie (SoC, Power, Temp)</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>Frontend:</h3>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li><strong>Web Dashboard</strong> (<code>webapp/</code>):
+                    <ul class="list-disc ml-6 mt-2">
+                        <li>Order-Formular</li>
+                        <li>Chart-Darstellung (Marktpreise)</li>
+                        <li>Aktive Orders & Trades</li>
+                        <li>Echtzeit-Updates via WebSocket</li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <hr>
+            
+            <h2><span class="emoji">📊</span>Metriken und Monitoring</h2>
+            
+            <h3>Prometheus-Metriken:</h3>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li><strong>G_MARK</strong>: Aktueller Marktpreis (pro Markt)</li>
+                <li><strong>G_EMA</strong>: Exponentieller gleitender Durchschnitt</li>
+                <li><strong>G_VWAP</strong>: Volumengewichteter Durchschnittspreis</li>
+                <li><strong>G_EXPO_E</strong>: Exposure (Einkauf)</li>
+                <li><strong>G_EXPO_N</strong>: Exposure (Verkauf)</li>
+                <li><strong>G_PNL_REAL</strong>: Realisierter Gewinn/Verlust</li>
+                <li><strong>C_EVENTS</strong>: Anzahl Preis-Updates</li>
+            </ul>
+            
+            <h3>Grafana-Dashboards:</h3>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li>BESS-Überwachung</li>
+                <li>Trading-Analytics</li>
+                <li>Marktpreise-Visualisierung</li>
+                <li>System-Health</li>
+            </ul>
+            
+            <hr>
+            
+            <h2><span class="emoji">⚙️</span>Konfiguration</h2>
+            
+            <h3>Policy-Datei (<code>policy/policy.yaml</code>):</h3>
+            <pre><code>version: 6
+per_market_rps:
+  EPEX_AT_INTRADAY_15MIN: 120
+  EPEX_DE_INTRADAY_15MIN: 120</code></pre>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li><strong>per_market_rps</strong>: Rate-Limiting pro Markt (Orders pro Minute)</li>
+            </ul>
+            
+            <h3>Environment-Variablen:</h3>
+            <pre><code># Marktdaten
+ENTSO_E_TOKEN=your_token
+MARKET=epex_at
+BIDDING_ZONE=AT
+UPDATE_INTERVAL=300
+
+# Exchange
+SQLITE_PATH=/app/exchange.db
+REDIS_HOST=redis
+POLICY_PATH=/app/policy/policy.yaml</code></pre>
+            
+            <hr>
+            
+            <h2><span class="emoji">🚀</span>Zusammenfassung</h2>
+            <p class="mb-4 text-gray-300">
+                Das Phoenyra BESS Trade System implementiert einen <strong>vollautomatisierten Handel</strong> mit:
+            </p>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li><span class="highlight">✅ Automatischer Marktdaten-Abruf</span> (alle 5 Minuten)</li>
+                <li><span class="highlight">✅ Sofortige Matching-Engine</span> (Orders werden sofort gematcht)</li>
+                <li><span class="highlight">✅ Automatische Trade-Ausführung</span> (atomar, sicher)</li>
+                <li><span class="highlight">✅ SoC-basierte Schutzfunktionen</span> (verhindert Über-/Unterladung)</li>
+                <li><span class="highlight">✅ Echtzeit-Updates</span> (WebSocket für Dashboard)</li>
+                <li><span class="highlight">✅ Externe Börsen-Integration</span> (EPEX Spot, APG)</li>
+            </ul>
+            <p class="mb-4 text-gray-300">
+                Das System ist darauf ausgelegt, <strong>automatisch</strong> Strom zu kaufen und zu verkaufen, 
+                basierend auf Marktpreisen, BESS-Status und konfigurierten Strategien. Die Matching-Engine sorgt dafür, 
+                dass Orders <strong>sofort</strong> mit kompatiblen Gegenorders gematcht und Trades ausgeführt werden - ohne manuelle Intervention.
+            </p>
+            
+            <hr>
+            
+            <h2><span class="emoji">📚</span>Weitere Dokumentation</h2>
+            <ul class="list-disc text-gray-300 mb-4">
+                <li><strong>Matching-Engine Details:</strong> Siehe <code>Matching-Engine-Dokumentation.md</code></li>
+                <li><strong>Trading Bridge:</strong> Siehe <code>TRADING_BRIDGE_KONZEPT.md</code></li>
+                <li><strong>Vollständige Dokumentation:</strong> Siehe <code>Dokumentation_BESS_Trade.md</code></li>
+            </ul>
+            
+            <hr>
+            
+            <div class="mt-8 text-center text-gray-400 text-sm">
+                <p><strong>Erstellt:</strong> 2025-11-05</p>
+                <p><strong>Version:</strong> 1.0</p>
+                <p><strong>Autor:</strong> Phoenyra BESS Trade System</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

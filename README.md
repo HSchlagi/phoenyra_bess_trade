@@ -10,6 +10,10 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **🎨 Moderne Web-Oberfläche** mit Flask + Tailwind CSS
 - **🔮 Magic UI Komponenten** (Aurora Text, Neon Cards, Shimmer Buttons)
 - **📊 Professionelle Charts** mit ApexCharts
+- **💾 Persistente Chart-Historie** mit localStorage + Server-Sync
+- **⚙️ Chart-Einstellungen** (Historie-Dauer, Auto-Sync, Auto-Play)
+- **📥 Export-Funktion** für Chart-Daten (JSON/CSV)
+- **🔄 Chart-Reset** für Historie-Management
 - **🔋 BESS-Status-Monitoring** (SoC, Leistung, Temperatur)
 - **💹 Trading-Funktionen** (Orders, Trades, Marktpreise)
 - **⚙️ Automatische Matching-Engine** für sofortige Order-Ausführung
@@ -112,6 +116,10 @@ docker compose ps
 - **BESS-Status-Monitoring** in Echtzeit
 - **Trading-Operations** mit Order-Management
 - **Marktpreise-Visualisierung** mit Zeitreihen-Charts
+- **Persistente Chart-Historie** - Daten bleiben beim Seitenwechsel erhalten
+- **Chart-Einstellungen** - Historie-Dauer, Auto-Sync, Auto-Play konfigurierbar
+- **Export-Funktion** - Chart-Daten als JSON oder CSV exportieren
+- **Chart-Reset** - Historie zurücksetzen
 - **Trading-Plattform-Auswahl** (Interner Exchange / EPEX Spot / APG)
 - **Automatische Order-Ausführung** via Matching-Engine
 
@@ -243,8 +251,11 @@ phoenyra_BESS_Trade/
 
 Vollständige Dokumentation finden Sie in:
 - **[Dokumentation_BESS_Trade.md](Dokumentation_BESS_Trade.md)** - Vollständige System-Dokumentation (v3.0)
+- **[AUTOMATISIERTER_HANDEL.md](AUTOMATISIERTER_HANDEL.md)** - Automatisierter Handel im Detail
+- **[automatisierter_handel.html](automatisierter_handel.html)** - Automatisierter Handel (HTML)
 - **[Summary_BESS_Trade.md](Summary_BESS_Trade.md)** - Zusammenfassung der ETRM-Integration
 - **[TRADING_BRIDGE_KONZEPT.md](TRADING_BRIDGE_KONZEPT.md)** - Trading-Bridge Konzept & Integration
+- **[Matching-Engine-Dokumentation.md](Matching-Engine-Dokumentation.md)** - Matching-Engine Details
 - **[PROMETHEUS_GUIDE.md](PROMETHEUS_GUIDE.md)** - Prometheus Queries & Metriken
 - **[Phoenyra_BESS_Trading_Final_Documentation_v2.md](Phoenyra_BESS_Trading_Final_Documentation_v2.md)** - Legacy Dokumentation v2.0
 
@@ -266,7 +277,17 @@ Bei Fragen oder Problemen:
 - Erstelle ein [Issue](https://github.com/HSchlagi/phoenyra_bess_trade/issues)
 - Kontaktiere uns unter: office@instanet.at
 
-## 🆕 Was ist neu? (v3.0 - 04.11.2025)
+## 🆕 Was ist neu? (v3.0 - 05.11.2025)
+
+### Chart-Historie & Persistenz (05.11.2025)
+- ✅ **Persistente Chart-Historie** mit localStorage - Daten bleiben beim Seitenwechsel erhalten
+- ✅ **Hybrid-Sync** mit Server-Backup - Automatische Synchronisation zwischen Client und Server
+- ✅ **Einstellungs-UI** für Historie-Dauer, Auto-Sync und Auto-Play
+- ✅ **Export-Funktion** für Chart-Daten (JSON/CSV Format)
+- ✅ **Chart-Reset-Button** zum Zurücksetzen der Historie
+- ✅ **Verbesserte Legende** mit vollständigen Beschreibungen (Markt Preis, EMA, VWAP)
+- ✅ **Server-seitige Historie** in SQLite für längere Zeiträume (24 Stunden)
+- ✅ **Automatisierter Handel Dokumentation** (Markdown & HTML)
 
 ### Trading-Bridge Integration (04.11.2025)
 - ✅ **Trading Bridge Service** für Routing zu externen Plattformen (EPEX Spot, APG)

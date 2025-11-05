@@ -1,5 +1,8 @@
 # Phoenyra BESS Trade System - Dokumentation
 
+**Version:** 3.0 (ULTRA OMEGA+)  
+**Stand:** 05.11.2025
+
 ## Übersicht
 
 Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading und die Optimierung von Battery Energy Storage Systems (BESS). Das System kombiniert eine FastAPI-basierte Backend-Architektur mit einer Flask-basierten Web-Oberfläche, die mit Tailwind CSS und Magic UI Komponenten gestaltet wurde.
@@ -62,6 +65,14 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Automatische Preisvalidierung** (nur Preise 0-1000 EUR/MWh)
 - **Sattes Grün** für optimale Sichtbarkeit
 - **Responsive Design** für verschiedene Bildschirmgrößen
+- **Persistente Chart-Historie** mit localStorage - Daten bleiben beim Seitenwechsel erhalten
+- **Hybrid-Sync** mit Server-Backup - Automatische Synchronisation zwischen Client und Server (alle 60 Sekunden)
+- **Server-seitige Historie** in SQLite für längere Zeiträume (24 Stunden)
+- **Chart-Einstellungen** - Historie-Dauer (0.5-24h), maximale Datenpunkte (60-7200), Auto-Sync, Auto-Play
+- **Export-Funktion** - Chart-Daten als JSON oder CSV exportieren
+- **Chart-Reset-Button** - Historie zurücksetzen mit Bestätigung
+- **Verbesserte Legende** - Vollständige Beschreibungen (Markt Preis, EMA (Exponential Moving Average), VWAP (Volume-Weighted Average Price))
+- **Vertikale Legende-Anordnung** für bessere Lesbarkeit
 
 ### 5. Magic UI Komponenten
 - **Aurora Text** für Überschriften
@@ -119,6 +130,15 @@ services:
 - `POST /api/telemetry` - BESS-Telemetrie senden
 - `POST /api/bess/telemetry` - Externe Telemetrie-Daten empfangen
 - `GET /api/bess/status` - Aktuelle BESS-Status abrufen
+
+#### Marktdaten-Historie (Neu - 05.11.2025)
+- `GET /api/market/history` - Marktpreis-Historie abrufen
+  - Parameter: `market` (default: epex_at), `hours` (default: 1), `limit` (default: 360)
+  - Gibt historische Preisdaten aus SQLite zurück (bis zu 24 Stunden)
+- `POST /api/market/history/sync` - Client-Server-Synchronisation
+  - Body: `{market, client_history, last_sync}`
+  - Synchronisiert Client-Historie (localStorage) mit Server-Historie (SQLite)
+  - Gibt fehlende Datenpunkte zurück für nahtlose Fortsetzung
 
 #### Forecast API
 - `POST /api/forecast/dayahead` - Day-Ahead Forecast anfordern
@@ -191,6 +211,46 @@ APG_MPID=${APG_MPID:-}
 APG_BILANZGRUPPE=${APG_BILANZGRUPPE:-}
 APG_AS4_ENDPOINT=${APG_AS4_ENDPOINT:-}
 ```
+
+## 🆕 Was ist neu? (v3.0 - 05.11.2025)
+
+### Chart-Historie & Persistenz (05.11.2025)
+- ✅ **Persistente Chart-Historie** mit localStorage - Daten bleiben beim Seitenwechsel erhalten
+- ✅ **Hybrid-Sync** mit Server-Backup - Automatische Synchronisation zwischen Client und Server (alle 60 Sekunden)
+- ✅ **Einstellungs-UI** für Historie-Dauer (0.5-24h), maximale Datenpunkte (60-7200), Auto-Sync und Auto-Play
+- ✅ **Export-Funktion** für Chart-Daten (JSON/CSV Format) - Direkter Download im Browser
+- ✅ **Chart-Reset-Button** zum Zurücksetzen der Historie mit Sicherheitsabfrage
+- ✅ **Verbesserte Legende** mit vollständigen Beschreibungen (Markt Preis, EMA (Exponential Moving Average), VWAP (Volume-Weighted Average Price))
+- ✅ **Vertikale Legende-Anordnung** für bessere Lesbarkeit
+- ✅ **Server-seitige Historie** in SQLite für längere Zeiträume (24 Stunden)
+- ✅ **Neue API-Endpunkte**: `/api/market/history` und `/api/market/history/sync`
+- ✅ **Automatisierter Handel Dokumentation** (Markdown & HTML) - Vollständige Erklärung des automatisierten Handels
+
+### Trading-Bridge Integration (04.11.2025)
+- ✅ **Trading Bridge Service** für Routing zu externen Plattformen (EPEX Spot, APG)
+- ✅ **Trading-Config Dashboard** für Credentials-Verwaltung
+- ✅ **Order-Formular erweitert** mit Plattform-Auswahl (Intern / EPEX Spot / APG)
+- ✅ **Trading-Bridge-Konzept-Dokumentation** mit vollständiger Integration-Anleitung
+- ✅ **Marktpreis-Chart verbessert** auf Zeitreihen-Chart umgestellt
+- ✅ **Umrechnungsfehler behoben** (ct/kWh → EUR/MWh)
+
+### ETRM Services Integration (01.11.2025)
+- ✅ **5 neue Enterprise Services** integriert (Forecast, Risk, Grid, Credit, Billing)
+- ✅ **5 neue Dashboards** mit interaktiven Charts
+- ✅ **Prometheus-Monitoring** für alle Services
+- ✅ **Active Menu Highlighting** für bessere UX
+- ✅ **Navigation optimiert** und bereinigt
+
+### Highlights
+- 🔮 **Forecast**: Automatische Preis- und Lastprognosen für optimales Trading
+- 🛡️ **Risk**: VaR-Berechnung und Risk-Limit-Überwachung
+- ⚡ **Grid**: Echtzeit-Netzfrequenz-Monitoring mit Constraint-Alerts
+- 💳 **Credit**: Counterparty Exposure Management
+- 💰 **Billing**: Automatische Invoice-Generierung
+- 📊 **Chart-Persistenz**: Historie bleibt beim Seitenwechsel erhalten
+- 🔄 **Hybrid-Sync**: Nahtlose Synchronisation zwischen Client und Server
+
+---
 
 ## Installation und Start
 
@@ -764,6 +824,10 @@ Die Matching-Engine ist integriert mit:
 - ✅ BESS Telemetrie (Modbus, MQTT, REST)
 - ✅ Real-time WebSocket-Updates
 - ✅ Order Management & Trade History
+- ✅ Persistente Chart-Historie (localStorage + Server-Sync)
+- ✅ Chart-Einstellungen (Historie-Dauer, Auto-Sync, Auto-Play)
+- ✅ Export-Funktion (JSON/CSV)
+- ✅ Chart-Reset-Button
 
 ### ETRM Services (2025-11-01)
 - ✅ **Forecast API**: Day-Ahead & Intraday Prognosen
@@ -790,6 +854,8 @@ Die Matching-Engine ist integriert mit:
 - ✅ Modern Dark-Mode Design
 - ✅ Gold-Standard Design-System
 - ✅ Active Menu Highlighting
+- ✅ Verbesserte Chart-Legende mit vollständigen Beschreibungen
+- ✅ Vertikale Legende-Anordnung
 - ✅ Responsive Layout
 - ✅ Interaktive Charts (ApexCharts)
 
@@ -797,4 +863,4 @@ Die Matching-Engine ist integriert mit:
 
 **© 2025 Phoenyra.com by Ing. Heinz Schlagintweit. Alle Rechte vorbehalten.**
 
-*Diese Dokumentation beschreibt das Phoenyra BESS Trade System v3.0 (ULTRA OMEGA+) mit allen implementierten Features inkl. vollständiger ETRM Services Integration (Stand: 01.11.2025).*
+*Diese Dokumentation beschreibt das Phoenyra BESS Trade System v3.0 (ULTRA OMEGA+) mit allen implementierten Features inkl. vollständiger ETRM Services Integration, Chart-Historie-Persistenz und automatisiertem Handel (Stand: 05.11.2025).*

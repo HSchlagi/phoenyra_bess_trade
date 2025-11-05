@@ -23,6 +23,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY, user_key TEXT, market TEXT, side TEXT, type TEXT, tif TEXT, p_limit REAL, qty REAL, d_start TEXT, d_end TEXT, status TEXT, filled REAL, ts TEXT);
     CREATE TABLE IF NOT EXISTS trades(id TEXT PRIMARY KEY, order_id TEXT, user_key TEXT, executed REAL, price REAL, ts TEXT, market TEXT, side TEXT);
     CREATE TABLE IF NOT EXISTS orderbook_history(id INTEGER PRIMARY KEY AUTOINCREMENT, ts TEXT, market TEXT, bids TEXT, asks TEXT);
+    CREATE TABLE IF NOT EXISTS market_price_history(id INTEGER PRIMARY KEY AUTOINCREMENT, market TEXT, mark REAL, ema REAL, vwap REAL, timestamp INTEGER, ts TEXT);
+    CREATE INDEX IF NOT EXISTS idx_market_price_history_market_ts ON market_price_history(market, timestamp);
     """    )
     con.commit(); con.close()
 init_db()
@@ -302,7 +304,8 @@ def throttle_remaining_cached(api_key:str, market:str):
 @app.post("/admin/pricefeed/push")
 def pricefeed_push(market: str, price: float, volume: float = 1.0):
     key=f"price:stream:{market}"
-    r.xadd(key, {"p": price, "v": volume, "ts": int(time.time()*1000)}, maxlen=10000, approximate=True)
+    ts_ms = int(time.time()*1000)
+    r.xadd(key, {"p": price, "v": volume, "ts": ts_ms}, maxlen=10000, approximate=True)
     r.set(f"price:mark:{market}", price)
     # EMA
     prev = r.get(f"price:ema:{market}"); prev = float(prev) if prev else price
@@ -317,6 +320,21 @@ def pricefeed_push(market: str, price: float, volume: float = 1.0):
         num += p*v; den += v
     vwap = (num/den) if den>0 else price
     r.set(f"price:vwap:{market}", vwap)
+    
+    # Persist to SQLite for history
+    try:
+        con=db(); c=con.cursor()
+        c.execute("INSERT INTO market_price_history(market, mark, ema, vwap, timestamp, ts) VALUES(?,?,?,?,?,?)",
+                  (market, price, ema, vwap, ts_ms, datetime.utcnow().isoformat()))
+        con.commit(); con.close()
+        # Keep only last 24 hours of data (cleanup old entries)
+        cutoff_ts = ts_ms - (24 * 60 * 60 * 1000)
+        con=db(); c=con.cursor()
+        c.execute("DELETE FROM market_price_history WHERE timestamp < ?", (cutoff_ts,))
+        con.commit(); con.close()
+    except Exception as e:
+        print(f"Error persisting price history: {e}")
+    
     G_MARK.labels(market).set(price); G_EMA.labels(market).set(ema); G_VWAP.labels(market).set(vwap); C_EVENTS.labels(market).inc()
     return {"status":"OK"}
 
@@ -352,6 +370,127 @@ def get_market_prices(market: str = "epex_at"):
             "vwap": 85.10,
             "timestamp": datetime.now().isoformat(),
             "market": market,
+            "error": str(e)
+        }
+
+@app.get("/market/history")
+def get_market_history(market: str = "epex_at", hours: int = 1, limit: int = 360):
+    """Get market price history from database
+    
+    Args:
+        market: Market identifier
+        hours: Number of hours to retrieve (default: 1)
+        limit: Maximum number of data points (default: 360)
+    
+    Returns:
+        List of price history entries
+    """
+    try:
+        cutoff_ts = int(time.time() * 1000) - (hours * 60 * 60 * 1000)
+        con = db()
+        c = con.cursor()
+        c.execute("""
+            SELECT timestamp, mark, ema, vwap, ts 
+            FROM market_price_history 
+            WHERE market = ? AND timestamp >= ?
+            ORDER BY timestamp ASC
+            LIMIT ?
+        """, (market, cutoff_ts, limit))
+        rows = c.fetchall()
+        con.close()
+        
+        history = []
+        for row in rows:
+            history.append({
+                "timestamp": row["timestamp"],
+                "mark": row["mark"],
+                "ema": row["ema"],
+                "vwap": row["vwap"],
+                "ts": row["ts"]
+            })
+        
+        return {
+            "market": market,
+            "count": len(history),
+            "history": history
+        }
+    except Exception as e:
+        return {
+            "market": market,
+            "count": 0,
+            "history": [],
+            "error": str(e)
+        }
+
+@app.post("/market/history/sync")
+def sync_market_history(data: dict = Body(...)):
+    """Sync client-side history with server
+    
+    Args in body:
+        market: Market identifier
+        client_history: Array of {timestamp, mark, ema, vwap} entries
+        last_sync: Last sync timestamp (optional)
+    
+    Returns:
+        Server history that client doesn't have
+    """
+    try:
+        market = data.get("market", "epex_at")
+        client_history = data.get("client_history", [])
+        last_sync = data.get("last_sync", 0)
+        
+        # Get client timestamps
+        client_timestamps = {int(p.get("timestamp", 0)) for p in client_history}
+        
+        # Get server history newer than last_sync
+        cutoff_ts = max(last_sync, int(time.time() * 1000) - (24 * 60 * 60 * 1000))
+        con = db()
+        c = con.cursor()
+        
+        if client_timestamps:
+            # Exclude timestamps that client already has
+            placeholders = ",".join("?" * len(client_timestamps))
+            c.execute(f"""
+                SELECT timestamp, mark, ema, vwap, ts 
+                FROM market_price_history 
+                WHERE market = ? AND timestamp >= ? AND timestamp NOT IN ({placeholders})
+                ORDER BY timestamp ASC
+                LIMIT 1000
+            """, [market, cutoff_ts] + list(client_timestamps))
+        else:
+            # No client timestamps, return all since cutoff
+            c.execute("""
+                SELECT timestamp, mark, ema, vwap, ts 
+                FROM market_price_history 
+                WHERE market = ? AND timestamp >= ?
+                ORDER BY timestamp ASC
+                LIMIT 1000
+            """, (market, cutoff_ts))
+        
+        rows = c.fetchall()
+        con.close()
+        
+        server_history = []
+        for row in rows:
+            server_history.append({
+                "timestamp": row["timestamp"],
+                "mark": row["mark"],
+                "ema": row["ema"],
+                "vwap": row["vwap"],
+                "ts": row["ts"]
+            })
+        
+        return {
+            "market": market,
+            "count": len(server_history),
+            "history": server_history,
+            "synced_at": int(time.time() * 1000)
+        }
+    except Exception as e:
+        return {
+            "market": market,
+            "count": 0,
+            "history": [],
             "error": str(e)
         }
 
