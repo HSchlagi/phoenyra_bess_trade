@@ -3,10 +3,10 @@
 {% block title %}Phoenyra BESS Trade Dashboard{% endblock %}
 
 {% block content %}
-<div class="px-4 py-6 sm:px-0 relative z-10">
+<div class="px-4 py-4 sm:px-0 relative z-10">
     <!-- Hero Section with Aurora Text -->
-    <div class="text-center mb-8">
-        <h1 class="aurora-text text-2xl md:text-3xl font-bold mb-4">
+    <div class="text-center mb-4">
+        <h1 class="aurora-text text-2xl md:text-3xl font-bold mb-2">
             BESS Trading Dashboard
         </h1>
         <p class="text-gray-300 text-sm">
@@ -30,7 +30,7 @@
     <!-- Status Cards with Magic UI Effects -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <!-- BESS Status -->
-        <div class="dark-card p-6" id="bess-status">
+        <div class="shadcn-card" id="bess-status">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <i class="fas fa-battery-half text-2xl text-green-400"></i>
@@ -46,7 +46,7 @@
         </div>
 
         <!-- Active Power -->
-        <div class="dark-card p-6">
+        <div class="shadcn-card">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <i class="fas fa-bolt text-2xl text-yellow-400"></i>
@@ -61,7 +61,7 @@
         </div>
 
         <!-- Temperature -->
-        <div class="dark-card p-6">
+        <div class="shadcn-card">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <i class="fas fa-thermometer-half text-2xl text-blue-400"></i>
@@ -76,7 +76,7 @@
         </div>
 
         <!-- Total Exposure -->
-        <div class="dark-card p-6">
+        <div class="shadcn-card">
             <div class="flex items-center">
                 <div class="flex-shrink-0">
                     <i class="fas fa-euro-sign text-2xl text-purple-400"></i>
@@ -94,7 +94,7 @@
     <!-- Charts Section with Magic UI -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Price Chart -->
-        <div class="dark-card p-6" id="trading">
+        <div class="shadcn-card" id="trading">
             <div class="flex justify-between items-center mb-4">
                 <div>
                     <h3 class="text-lg leading-6 font-medium text-white">
@@ -103,57 +103,123 @@
                     <p class="text-xs text-gray-400 mt-1">EPEX Spot Day-Ahead Preise (Österreich) via <span style="white-space: nowrap;">ENTSO-E</span></p>
                 </div>
                 <div class="flex gap-2">
-                    <button id="exportChartBtn" class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors" title="Export Chart Data">
+                    <button id="exportChartBtn" class="shadcn-btn shadcn-btn-secondary" title="Export Chart Data">
                         <i class="fas fa-download mr-1"></i>Export
                     </button>
-                    <button id="resetChartBtn" class="px-3 py-1 text-xs bg-red-700 hover:bg-red-600 text-white rounded-md transition-colors" title="Chart zurücksetzen">
+                    <button id="resetChartBtn" class="shadcn-btn shadcn-btn-destructive" title="Chart zurücksetzen">
                         <i class="fas fa-redo mr-1"></i>Reset
                     </button>
-                    <button id="chartSettingsBtn" class="px-3 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded-md transition-colors" title="Chart-Einstellungen">
+                    <button id="chartSettingsBtn" class="shadcn-btn shadcn-btn-secondary" title="Chart-Einstellungen">
                         <i class="fas fa-cog mr-1"></i>Einstellungen
                     </button>
                 </div>
             </div>
-            <div id="priceChart" class="h-64"></div>
+            <div class="h-64 relative">
+                <canvas id="priceChart"></canvas>
+            </div>
             <div id="chartStatus" class="text-xs text-gray-500 mt-2"></div>
         </div>
 
         <!-- VWAP Chart -->
-        <div class="dark-card p-6">
+        <div class="shadcn-card">
             <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 <i class="fas fa-chart-bar mr-2 text-green-400"></i>VWAP (15min)
             </h3>
             <p class="text-xs text-gray-400 mb-2">Volume-Weighted Average Price</p>
-            <div id="vwapChart" class="h-64"></div>
+            <div class="h-64 relative">
+                <canvas id="vwapChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Long-term Analysis Chart - Collapsible -->
+    <div class="mt-8 shadcn-card">
+        <div class="flex justify-between items-center mb-4 cursor-pointer" id="longtermHeader" onclick="toggleLongtermSection()">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-chevron-down text-purple-400 transition-transform duration-200" id="longtermChevron"></i>
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-white">
+                        <i class="fas fa-chart-area mr-2 text-purple-400"></i>Langzeit-Analyse
+                    </h3>
+                    <p class="text-xs text-gray-400 mt-1">Historische Preisentwicklung mit aggregierten Daten</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button id="longterm1d" class="shadcn-btn shadcn-btn-secondary longterm-btn active" data-days="1">1 Tag</button>
+                <button id="longterm7d" class="shadcn-btn shadcn-btn-secondary longterm-btn" data-days="7">7 Tage</button>
+                <button id="longterm30d" class="shadcn-btn shadcn-btn-secondary longterm-btn" data-days="30">30 Tage</button>
+                <button id="longterm90d" class="shadcn-btn shadcn-btn-secondary longterm-btn" data-days="90">90 Tage</button>
+                <button id="exportLongtermBtn" class="shadcn-btn shadcn-btn-secondary" title="Langzeit-Daten exportieren">
+                    <i class="fas fa-download mr-1"></i>Export
+                </button>
+            </div>
+        </div>
+        <div id="longtermContent" class="longterm-content">
+            <div class="flex gap-2 mb-4">
+                <label class="flex items-center text-sm text-gray-300">
+                    <input type="checkbox" id="showMinMax" class="mr-2" checked>
+                    Min/Max anzeigen
+                </label>
+                <label class="flex items-center text-sm text-gray-300">
+                    <input type="checkbox" id="showVolatility" class="mr-2">
+                    Volatilitäts-Band
+                </label>
+                <label class="flex items-center text-sm text-gray-300">
+                    <input type="checkbox" id="showAverage" class="mr-2" checked>
+                    Durchschnitt
+                </label>
+            </div>
+            <div class="h-96 relative">
+                <canvas id="longtermChart"></canvas>
+            </div>
+            <div id="longtermStatus" class="text-xs text-gray-400 mt-2 text-center"></div>
+            <div id="longtermStats" class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <span class="text-gray-400">Durchschnitt:</span>
+                    <span class="text-white ml-2" id="statAvg">--</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">Maximum:</span>
+                    <span class="text-white ml-2" id="statMax">--</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">Minimum:</span>
+                    <span class="text-white ml-2" id="statMin">--</span>
+                </div>
+                <div>
+                    <span class="text-gray-400">Volatilität:</span>
+                    <span class="text-white ml-2" id="statVol">--</span>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Trading Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
         <!-- Order Form -->
-        <div class="dark-card p-6">
+        <div class="shadcn-card">
             <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 <i class="fas fa-plus-circle mr-2 text-purple-400"></i>Neue Order
             </h3>
             <form id="orderForm" action="/order" method="POST" class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Seite</label>
-                    <select name="side" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <select name="side" class="shadcn-input">
                         <option value="buy">Kaufen</option>
                         <option value="sell">Verkaufen</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Menge (MWh)</label>
-                    <input type="number" name="amount" step="0.1" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="1.0">
+                    <input type="number" name="amount" step="0.1" class="shadcn-input" placeholder="1.0">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Preis (€/MWh)</label>
-                    <input type="number" name="price" step="0.01" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="0.43">
+                    <input type="number" name="price" step="0.01" class="shadcn-input" placeholder="0.43">
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Markt</label>
-                    <select name="market" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <select name="market" class="shadcn-input">
                         <option value="epex_at">EPEX AT</option>
                         <option value="EPEX_AT_INTRADAY_15MIN">EPEX AT Intraday</option>
                     </select>
@@ -162,7 +228,7 @@
                     <label class="block text-sm font-medium text-gray-300 mb-1">
                         <i class="fas fa-exchange-alt mr-1"></i>Trading-Plattform
                     </label>
-                    <select name="target_exchange" id="target-exchange" class="w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                    <select name="target_exchange" id="target-exchange" class="shadcn-input">
                         <option value="INTERNAL">🏠 Interner Exchange</option>
                         <option value="EPEX_SPOT">⚡ EPEX Spot</option>
                         <option value="APG">🔌 APG</option>
@@ -172,14 +238,14 @@
                         Externe Plattformen erfordern Marktteilnehmer-Registrierung und Credentials
                     </p>
                 </div>
-                <button type="submit" class="shimmer-button w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium">
+                <button type="submit" class="shadcn-btn shadcn-btn-primary w-full flex justify-center">
                     <i class="fas fa-paper-plane mr-2"></i>Order erstellen
                 </button>
             </form>
         </div>
 
         <!-- Active Orders -->
-        <div class="dark-card p-6">
+        <div class="shadcn-card">
             <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 <i class="fas fa-list mr-2 text-blue-400"></i>Aktive Orders
             </h3>
@@ -192,7 +258,7 @@
         </div>
 
         <!-- Recent Trades -->
-        <div class="dark-card p-6">
+        <div class="shadcn-card">
             <h3 class="text-lg leading-6 font-medium text-white mb-4">
                 <i class="fas fa-exchange-alt mr-2 text-green-400"></i>Letzte Trades
             </h3>
@@ -206,25 +272,25 @@
     </div>
 
     <!-- Telemetry Control -->
-    <div class="mt-8 dark-card p-6">
+    <div class="mt-8 shadcn-card">
         <h3 class="text-lg leading-6 font-medium text-white mb-4">
             <i class="fas fa-cogs mr-2 text-purple-400"></i>BESS Telemetrie-Steuerung
         </h3>
         <form id="telemetryForm" class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
                 <label class="block text-sm font-medium text-gray-300">SoC (%)</label>
-                <input type="number" name="soc_percent" step="0.1" min="0" max="100" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="72.5">
+                <input type="number" name="soc_percent" step="0.1" min="0" max="100" class="shadcn-input" placeholder="72.5">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-300">Aktive Leistung (MW)</label>
-                <input type="number" name="active_power" step="0.1" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="3.8">
+                <input type="number" name="active_power" step="0.1" class="shadcn-input" placeholder="3.8">
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-300">Temperatur (°C)</label>
-                <input type="number" name="temperature" step="0.1" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="28.3">
+                <input type="number" name="temperature" step="0.1" class="shadcn-input" placeholder="28.3">
             </div>
             <div class="md:col-span-3">
-                <button type="submit" class="flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                <button type="submit" class="shadcn-btn shadcn-btn-primary flex justify-center">
                     <i class="fas fa-upload mr-2"></i>Telemetrie senden
                 </button>
             </div>
@@ -243,6 +309,7 @@
             this.market = 'epex_at';
             this.lastSync = 0;
             this.syncEnabled = true;
+            this.chartsInitialized = false; // Prevent double initialization
             this.loadSettings();
             this.init();
         }
@@ -294,6 +361,7 @@
                 this.startServerSync();
             }
             this.setupEventListeners();
+            this.initLongtermChart();
         }
 
         async loadInitialData() {
@@ -347,6 +415,7 @@
             }
         }
 
+
         updateMarketData(data) {
             const now = new Date().getTime();
             
@@ -359,49 +428,159 @@
             if (mark > 0 && mark < 1000) {  // Reasonable range check
                 // Remove duplicate timestamps (same second) to avoid duplicates
                 const currentSecond = Math.floor(now / 1000) * 1000;
+                const beforeFilter = this.priceHistory.length;
                 this.priceHistory = this.priceHistory.filter(p => 
                     Math.floor(p.timestamp / 1000) * 1000 !== currentSecond
                 );
                 
-                // Add new data point
-                this.priceHistory.push({
+                // Add new data point with current timestamp
+                // CRITICAL: Only store EMA/VWAP if they are valid numbers, don't replace with mark
+                const newDataPoint = {
                     timestamp: now,
                     mark: mark,
-                    ema: isNaN(ema) || ema <= 0 ? mark : ema,
-                    vwap: isNaN(vwap) || vwap <= 0 ? mark : vwap
-                });
+                    ema: (!isNaN(ema) && ema > 0 && Number.isFinite(ema)) ? ema : null,
+                    vwap: (!isNaN(vwap) && vwap > 0 && Number.isFinite(vwap)) ? vwap : null
+                };
+                this.priceHistory.push(newDataPoint);
+                
+                // Debug: Log data addition periodically (every 10th update to avoid spam)
+                if (this.priceHistory.length % 10 === 0) {
+                    console.log('Added new data point:', {
+                        timestamp: new Date(now).toLocaleTimeString(),
+                        mark: mark,
+                        ema: newDataPoint.ema,
+                        vwap: newDataPoint.vwap,
+                        historyLength: this.priceHistory.length,
+                        removedDuplicates: beforeFilter - (this.priceHistory.length - 1)
+                    });
+                }
             }
             
-            // Clean up old data
+            // Clean up old data (but keep data within maxHistoryAge)
+            // IMPORTANT: This should NOT remove the data we just added
             this.cleanupHistory();
             
             // Persist to localStorage
             this.savePriceHistory();
             
-            // Update price chart with time series
-            if (this.priceChart) {
-                const markData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.mark }));
-                const emaData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.ema }));
-                const vwapData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.vwap }));
+            // Update price chart with Chart.js
+            if (this.priceChart && this.priceHistory.length > 0) {
+                // Ensure data is sorted by timestamp before mapping
+                const sortedHistory = [...this.priceHistory].sort((a, b) => a.timestamp - b.timestamp);
                 
-                this.priceChart.updateSeries([
-                    { name: 'Markt Preis', data: markData },
-                    { name: 'EMA (Exponential Moving Average)', data: emaData },
-                    { name: 'VWAP (Volume-Weighted Average Price)', data: vwapData }
-                ], false, true);
+                // Convert to Chart.js format: {x: timestamp, y: value} objects
+                // Filter out null/undefined/NaN values
+                const markData = sortedHistory
+                    .filter(p => p.mark != null && !isNaN(p.mark) && typeof p.timestamp === 'number' && Number.isFinite(p.mark) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.mark) }));
+                const emaData = sortedHistory
+                    .filter(p => p.ema != null && !isNaN(p.ema) && typeof p.timestamp === 'number' && Number.isFinite(p.ema) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.ema) }));
+                const vwapData = sortedHistory
+                    .filter(p => p.vwap != null && !isNaN(p.vwap) && typeof p.timestamp === 'number' && Number.isFinite(p.vwap) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.vwap) }));
+                
+                // Debug: Log data processing
+                console.log('Update chart - data processing:', {
+                    markData: markData.length,
+                    emaData: emaData.length,
+                    vwapData: vwapData.length,
+                    emaSample: emaData.slice(0, 3),
+                    emaValues: emaData.map(d => d[1]).slice(0, 5),
+                    emaDataFull: emaData.length > 0 ? emaData : 'NO EMA DATA',
+                    priceHistoryLength: this.priceHistory.length,
+                    priceHistoryWithEMA: this.priceHistory.filter(p => p.ema != null && !isNaN(p.ema)).length
+                });
+                
+                // Update Chart.js datasets - only include series with at least 2 points
+                const datasets = [];
+                
+                if (markData.length >= 2) {
+                    datasets.push({
+                        label: 'Markt Preis',
+                        data: markData,
+                        borderColor: '#00FF00', // Green
+                        backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    });
+                }
+                
+                if (emaData.length >= 2) {
+                    datasets.push({
+                        label: 'EMA (Exponential Moving Average)',
+                        data: emaData,
+                        borderColor: '#0066FF', // Blue
+                        backgroundColor: 'rgba(0, 102, 255, 0.1)',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    });
+                }
+                
+                if (vwapData.length >= 2) {
+                    datasets.push({
+                        label: 'VWAP (Volume-Weighted Average Price)',
+                        data: vwapData,
+                        borderColor: '#FF0000', // Red
+                        backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    });
+                }
+                
+                // Calculate Y-axis range from ALL data points
+                const allYValues = [];
+                [markData, emaData, vwapData].forEach(data => {
+                    data.forEach(d => {
+                        if (d && typeof d.y === 'number' && Number.isFinite(d.y)) {
+                            allYValues.push(d.y);
+                        }
+                    });
+                });
+                
+                // Update chart data
+                this.priceChart.data.datasets = datasets;
+                
+                // Update Y-axis range if we have data
+                if (allYValues.length > 0) {
+                    const minY = Math.min(...allYValues);
+                    const maxY = Math.max(...allYValues);
+                    const range = maxY - minY;
+                    const padding = range < 10 ? Math.max(range * 0.2, 10) : Math.max(range * 0.1, 5);
+                    
+                    this.priceChart.options.scales.y.min = minY - padding;
+                    this.priceChart.options.scales.y.max = maxY + padding;
+                } else {
+                    this.priceChart.options.scales.y.min = undefined;
+                    this.priceChart.options.scales.y.max = undefined;
+                }
+                
+                // Update chart
+                this.priceChart.update('none'); // 'none' = no animation
             }
             
-            // Update VWAP chart
-            if (this.vwapChart) {
-                const vwapSeriesData = this.priceHistory.map(p => ({
-                    x: p.timestamp,
-                    y: p.vwap
-                }));
+            // Update VWAP chart with Chart.js
+            if (this.vwapChart && this.priceHistory.length > 0) {
+                // Ensure data is sorted by timestamp - use ALL available data
+                const sortedHistory = [...this.priceHistory].sort((a, b) => a.timestamp - b.timestamp);
+                const vwapData = sortedHistory
+                    .filter(p => p.vwap != null && !isNaN(p.vwap) && typeof p.timestamp === 'number' && Number.isFinite(p.vwap) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.vwap) }));
                 
-                this.vwapChart.updateSeries([{
-                    name: 'VWAP (€/MWh)',
-                    data: vwapSeriesData
-                }], false, true);
+                // Update chart data
+                if (vwapData.length >= 2) {
+                    this.vwapChart.data.datasets[0].data = vwapData;
+                    this.vwapChart.update('none'); // 'none' = no animation
+                }
             }
             
             // Update price display values
@@ -417,245 +596,368 @@
         }
 
         initializeCharts() {
+            // Prevent double initialization
+            if (this.chartsInitialized) {
+                console.warn('⚠️ Charts already initialized, skipping...');
+                return;
+            }
+            
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                console.error('❌ Chart.js is not loaded! Please check script tags in base.html');
+                console.error('Expected Chart.js to be available, but it is:', typeof Chart);
+                return;
+            }
+            
+            console.log('✅ Chart.js loaded successfully, version:', Chart.version || 'unknown');
+            
             // Initialize Price History storage with localStorage persistence
             this.maxHistoryPoints = 360; // Last 360 data points (1 hour at 10s intervals)
             this.maxHistoryAge = 60 * 60 * 1000; // 1 hour in milliseconds
             this.priceHistory = this.loadPriceHistory();
             
-            // Initialize Price Chart as time series with ApexCharts
-            const priceOptions = {
-                series: [
-                    {
-                        name: 'Markt Preis',
-                        data: []
-                    },
-                    {
-                        name: 'EMA (Exponential Moving Average)',
-                        data: []
-                    },
-                    {
-                        name: 'VWAP (Volume-Weighted Average Price)',
-                        data: []
-                    }
-                ],
-                chart: {
-                    type: 'line',
-                    height: 250,
-                    background: 'transparent',
-                    toolbar: {
-                        show: true,
-                        tools: {
-                            download: true,
-                            zoom: true,
-                            pan: true
-                        }
-                    },
-                    zoom: {
-                        enabled: true,
-                        type: 'x'
-                    }
-                },
-                stroke: {
-                    curve: 'smooth',
-                    width: [3, 2, 2],
-                    colors: ['#00FF00', '#00FF88', '#88FF00']
-                },
-                colors: ['#00FF00', '#00FF88', '#88FF00'],
-                markers: {
-                    size: [4, 3, 3],
-                    hover: {
-                        size: 6
-                    }
-                },
-                fill: {
-                    type: 'gradient',
-                    gradient: {
-                        shade: 'dark',
-                        type: 'vertical',
-                        shadeIntensity: 0.3,
-                        gradientToColors: ['#00AA00'],
-                        inverseColors: false,
-                        opacityFrom: 0.4,
-                        opacityTo: 0.1
-                    }
-                },
-                xaxis: {
-                    type: 'datetime',
-                    labels: {
-                        style: {
-                            colors: '#ffffff'
-                        },
-                        datetimeUTC: false,
-                        format: 'HH:mm:ss'
-                    }
-                },
-                yaxis: {
-                    title: {
-                        text: 'EUR/MWh',
-                        style: {
-                            color: '#ffffff',
-                            fontSize: '12px'
-                        }
-                    },
-                    labels: {
-                        style: {
-                            colors: '#ffffff'
-                        }
-                    }
-                },
-                grid: {
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
-                },
-                tooltip: {
-                    theme: 'dark',
-                    y: {
-                        formatter: function(value) {
-                            return value.toFixed(2) + ' EUR/MWh';
-                        }
-                    }
-                },
-                legend: {
-                    show: true,
-                    showForSingleSeries: false,
-                    showForNullSeries: true,
-                    showForZeroSeries: true,
-                    position: 'bottom',
-                    horizontalAlign: 'left',
-                    floating: false,
-                    fontSize: '11px',
-                    fontFamily: 'inherit',
-                    fontWeight: 400,
-                    formatter: undefined,
-                    inverseOrder: false,
-                    width: 300,
-                    height: undefined,
-                    tooltipHoverFormatter: undefined,
-                    customLegendItems: [],
-                    offsetX: 0,
-                    offsetY: 5,
-                    labels: {
-                        colors: '#ffffff',
-                        useSeriesColors: false
-                    },
-                    markers: {
-                        width: 10,
-                        height: 10,
-                        strokeWidth: 0,
-                        strokeColor: '#fff',
-                        fillColors: undefined,
-                        radius: 5,
-                        customHTML: undefined,
-                        onClick: undefined,
-                        offsetX: 0,
-                        offsetY: 0
-                    },
-                    itemMargin: {
-                        horizontal: 10,
-                        vertical: 5
-                    },
-                    containerMargin: {
-                        left: 0,
-                        top: 0
-                    },
-                    onItemClick: {
-                        toggleDataSeries: true
-                    },
-                    onItemHover: {
-                        highlightDataSeries: true
-                    }
-                }
-            };
-
-            this.priceChart = new ApexCharts(document.querySelector("#priceChart"), priceOptions);
-            this.priceChart.render();
-
-            // Initialize VWAP Chart with ApexCharts
-            const vwapData = [];
-            const now = new Date();
+            // Initialize Price Chart with Chart.js
+            const priceContainer = document.getElementById("priceChart")?.parentElement || document.getElementById("priceChart");
+            const priceCanvas = document.getElementById("priceChart");
+            if (!priceCanvas) {
+                console.error('Price chart canvas #priceChart not found!');
+                return;
+            }
             
-            for (let i = 14; i >= 0; i--) {
-                const time = new Date(now.getTime() - i * 60000);
-                vwapData.push({
-                    x: time.getTime(),
-                    y: 85.10 + (Math.random() - 0.5) * 2
+            // Set canvas size explicitly to prevent infinite height
+            if (priceContainer) {
+                const containerHeight = priceContainer.offsetHeight || 256; // h-64 = 256px
+                priceCanvas.style.width = '100%';
+                priceCanvas.style.height = containerHeight + 'px';
+                priceCanvas.width = priceContainer.offsetWidth || priceCanvas.offsetWidth;
+                priceCanvas.height = containerHeight;
+            }
+            
+            try {
+                // Destroy existing chart if any
+                if (this.priceChart) {
+                    this.priceChart.destroy();
+                    this.priceChart = null;
+                }
+                
+                // Create Chart.js instance
+                const ctx = priceCanvas.getContext('2d');
+                this.priceChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Markt Preis',
+                                data: [],
+                                borderColor: '#00FF00', // Green
+                                backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                                borderWidth: 1.5,
+                                tension: 0.3,
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 4
+                            },
+                            {
+                                label: 'EMA (Exponential Moving Average)',
+                                data: [],
+                                borderColor: '#0066FF', // Blue
+                                backgroundColor: 'rgba(0, 102, 255, 0.1)',
+                                borderWidth: 1.5,
+                                tension: 0.3,
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 4
+                            },
+                            {
+                                label: 'VWAP (Volume-Weighted Average Price)',
+                                data: [],
+                                borderColor: '#FF0000', // Red
+                                backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                                borderWidth: 1.5,
+                                tension: 0.3,
+                                fill: false,
+                                pointRadius: 0,
+                                pointHoverRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    color: '#ffffff',
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: {
+                                        size: 13
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderWidth: 1,
+                                callbacks: {
+                                    title: function(context) {
+                                        if (context && context.length > 0 && context[0].parsed && typeof context[0].parsed.x === 'number') {
+                                            const date = new Date(context[0].parsed.x);
+                                            if (!isNaN(date.getTime())) {
+                                                const hh = String(date.getHours()).padStart(2, '0');
+                                                const mm = String(date.getMinutes()).padStart(2, '0');
+                                                return `${hh}:${mm}`;
+                                            }
+                                        }
+                                        return '';
+                                    },
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' €/MWh';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                ticks: {
+                                    color: '#ffffff',
+                                    font: {
+                                        size: 12
+                                    },
+                                    callback: function(value, index, values) {
+                                        // Convert timestamp to time string
+                                        if (typeof value !== 'number' || !Number.isFinite(value)) {
+                                            return '';
+                                        }
+                                        try {
+                                            const date = new Date(value);
+                                            if (isNaN(date.getTime())) {
+                                                return '';
+                                            }
+                                            const hh = String(date.getHours()).padStart(2, '0');
+                                            const mm = String(date.getMinutes()).padStart(2, '0');
+                                            return `${hh}:${mm}`;
+                                        } catch (e) {
+                                            return '';
+                                        }
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.08)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'EUR/MWh',
+                                    color: '#ffffff',
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                ticks: {
+                                    color: '#ffffff',
+                                    font: {
+                                        size: 12
+                                    },
+                                    callback: function(value) {
+                                        return value.toFixed(2);
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.08)'
+                                }
+                            }
+                        }
+                    }
                 });
+                
+                // Restore history if available
+                if (this.priceHistory.length > 0) {
+                    setTimeout(() => {
+                        this.restoreChartFromHistory();
+                    }, 100);
+                }
+                
+            } catch (error) {
+                console.error('Error initializing price chart:', error);
             }
 
-            const vwapOptions = {
-                series: [{
-                    name: 'VWAP (€/MWh)',
-                    data: vwapData
-                }],
-                chart: {
-                    type: 'line',
-                    height: 250,
-                    background: 'transparent',
-                    toolbar: {
-                        show: false
-                    }
-                },
-                stroke: {
-                    curve: 'smooth',
-                    width: 3,
-                    colors: ['#00FF00']
-                },
-                colors: ['#00FF00'],
-                markers: {
-                    size: 0
-                },
-                fill: {
-                    type: 'solid',
-                    colors: ['#00FF00'],
-                    opacity: 0.1
-                },
-                xaxis: {
-                    type: 'datetime',
-                    labels: {
-                        style: {
-                            colors: '#ffffff'
-                        }
-                    }
-                },
-                yaxis: {
-                    title: {
-                        text: 'EUR/MWh',
-                        style: {
-                            color: '#ffffff',
-                            fontSize: '12px'
-                        }
-                    },
-                    labels: {
-                        style: {
-                            colors: '#ffffff'
-                        },
-                        formatter: function(value) {
-                            return value.toFixed(2);
-                        }
-                    }
-                },
-                grid: {
-                    borderColor: 'rgba(255, 255, 255, 0.1)'
-                },
-                tooltip: {
-                    theme: 'dark',
-                    x: {
-                        format: 'HH:mm'
-                    },
-                    y: {
-                        formatter: function(value) {
-                            return value.toFixed(2) + ' €/MWh';
-                        }
-                    }
-                },
-                legend: {
-                    labels: {
-                        colors: '#ffffff'
-                    }
+            // Initialize VWAP Chart with Chart.js
+            const vwapContainer = document.getElementById("vwapChart")?.parentElement || document.getElementById("vwapChart");
+            const vwapCanvas = document.getElementById("vwapChart");
+            if (!vwapCanvas) {
+                console.error('VWAP chart canvas #vwapChart not found!');
+                return;
+            }
+            
+            // Set canvas size explicitly to prevent infinite height
+            if (vwapContainer) {
+                const containerHeight = vwapContainer.offsetHeight || 256; // h-64 = 256px
+                vwapCanvas.style.width = '100%';
+                vwapCanvas.style.height = containerHeight + 'px';
+                vwapCanvas.style.maxHeight = containerHeight + 'px';
+                vwapCanvas.width = vwapContainer.offsetWidth || vwapCanvas.offsetWidth;
+                vwapCanvas.height = containerHeight;
+            }
+            
+            try {
+                // Destroy existing chart if any
+                if (this.vwapChart) {
+                    this.vwapChart.destroy();
+                    this.vwapChart = null;
                 }
-            };
-
-            this.vwapChart = new ApexCharts(document.querySelector("#vwapChart"), vwapOptions);
-            this.vwapChart.render();
+                
+                // Create Chart.js instance
+                const vwapCtx = vwapCanvas.getContext('2d');
+                
+                if (!vwapCtx) {
+                    console.error('Could not get 2d context from VWAP canvas!');
+                    return;
+                }
+                this.vwapChart = new Chart(vwapCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: 'VWAP (€/MWh)',
+                            data: [],
+                            borderColor: '#00FF00', // Green
+                            backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                            borderWidth: 1.5,
+                            tension: 0.3,
+                            fill: false,
+                            pointRadius: 0,
+                            pointHoverRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                enabled: true,
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 8,
+                                displayColors: true,
+                                caretSize: 6,
+                                titleFont: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 13
+                                },
+                                animation: {
+                                    duration: 200
+                                },
+                                callbacks: {
+                                    title: function(context) {
+                                        // Show time in tooltip
+                                        if (context && context.length > 0 && context[0].parsed && typeof context[0].parsed.x === 'number') {
+                                            const date = new Date(context[0].parsed.x);
+                                            if (!isNaN(date.getTime())) {
+                                                const hh = String(date.getHours()).padStart(2, '0');
+                                                const mm = String(date.getMinutes()).padStart(2, '0');
+                                                return `${hh}:${mm}`;
+                                            }
+                                        }
+                                        return '';
+                                    },
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' €/MWh';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                ticks: {
+                                    color: '#ffffff',
+                                    font: {
+                                        size: 12
+                                    },
+                                    callback: function(value, index, values) {
+                                        // Convert timestamp to time string
+                                        if (typeof value !== 'number' || !Number.isFinite(value)) {
+                                            return '';
+                                        }
+                                        try {
+                                            const date = new Date(value);
+                                            if (isNaN(date.getTime())) {
+                                                return '';
+                                            }
+                                            const hh = String(date.getHours()).padStart(2, '0');
+                                            const mm = String(date.getMinutes()).padStart(2, '0');
+                                            return `${hh}:${mm}`;
+                                        } catch (e) {
+                                            return '';
+                                        }
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'EUR/MWh',
+                                    color: '#ffffff',
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                ticks: {
+                                    color: '#ffffff',
+                                    font: {
+                                        size: 12
+                                    },
+                                    callback: function(value) {
+                                        return value.toFixed(2);
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error initializing VWAP chart:', error);
+            }
+            
+            // Mark charts as initialized
+            this.chartsInitialized = true;
         }
 
         updateOrders(ordersData) {
@@ -867,10 +1169,32 @@
         cleanupHistory() {
             const now = Date.now();
             const cutoffTime = now - this.maxHistoryAge;
+            
+            const beforeCleanup = this.priceHistory.length;
+            
+            // Filter out old data points (keep data within maxHistoryAge)
             this.priceHistory = this.priceHistory.filter(p => p.timestamp >= cutoffTime);
             
+            // Limit to maxHistoryPoints, but keep the most recent data
             if (this.priceHistory.length > this.maxHistoryPoints) {
+                // Keep the most recent data points
                 this.priceHistory = this.priceHistory.slice(-this.maxHistoryPoints);
+            }
+            
+            // Sort by timestamp to ensure correct order
+            this.priceHistory.sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Debug: Log cleanup activity
+            if (beforeCleanup !== this.priceHistory.length) {
+                console.log('History cleanup:', {
+                    before: beforeCleanup,
+                    after: this.priceHistory.length,
+                    removed: beforeCleanup - this.priceHistory.length,
+                    cutoffTime: new Date(cutoffTime).toLocaleTimeString(),
+                    currentTime: new Date().toLocaleTimeString(),
+                    oldestKept: this.priceHistory.length > 0 ? new Date(this.priceHistory[0].timestamp).toLocaleTimeString() : 'none',
+                    newestKept: this.priceHistory.length > 0 ? new Date(this.priceHistory[this.priceHistory.length - 1].timestamp).toLocaleTimeString() : 'none'
+                });
             }
         }
 
@@ -936,27 +1260,110 @@
         // Restore chart from saved history
         restoreChartFromHistory() {
             if (this.priceHistory.length > 0 && this.priceChart) {
-                const markData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.mark }));
-                const emaData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.ema }));
-                const vwapData = this.priceHistory.map(p => ({ x: p.timestamp, y: p.vwap }));
+                // Sort by timestamp
+                const sortedHistory = [...this.priceHistory].sort((a, b) => a.timestamp - b.timestamp);
                 
-                this.priceChart.updateSeries([
-                    { name: 'Markt Preis', data: markData },
-                    { name: 'EMA (Exponential Moving Average)', data: emaData },
-                    { name: 'VWAP (Volume-Weighted Average Price)', data: vwapData }
-                ], false, true);
+                // Convert to Chart.js format: {x: timestamp, y: value} objects
+                // Filter out null/undefined/NaN values
+                const markData = sortedHistory
+                    .filter(p => p.mark != null && !isNaN(p.mark) && typeof p.timestamp === 'number' && Number.isFinite(p.mark) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.mark) }));
+                const emaData = sortedHistory
+                    .filter(p => p.ema != null && !isNaN(p.ema) && typeof p.timestamp === 'number' && Number.isFinite(p.ema) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.ema) }));
+                const vwapData = sortedHistory
+                    .filter(p => p.vwap != null && !isNaN(p.vwap) && typeof p.timestamp === 'number' && Number.isFinite(p.vwap) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.vwap) }));
+                
+                // Update Chart.js datasets - only include series with at least 2 points
+                const datasets = [];
+                
+                if (markData.length >= 2) {
+                    datasets.push({
+                        label: 'Markt Preis',
+                        data: markData,
+                        borderColor: '#00FF00', // Green
+                        backgroundColor: 'rgba(0, 255, 0, 0.1)',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    });
+                }
+                
+                if (emaData.length >= 2) {
+                    datasets.push({
+                        label: 'EMA (Exponential Moving Average)',
+                        data: emaData,
+                        borderColor: '#0066FF', // Blue
+                        backgroundColor: 'rgba(0, 102, 255, 0.1)',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    });
+                }
+                
+                if (vwapData.length >= 2) {
+                    datasets.push({
+                        label: 'VWAP (Volume-Weighted Average Price)',
+                        data: vwapData,
+                        borderColor: '#FF0000', // Red
+                        backgroundColor: 'rgba(255, 0, 0, 0.1)',
+                        borderWidth: 1.5,
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 0,
+                        pointHoverRadius: 4
+                    });
+                }
+                
+                // Calculate Y-axis range from ALL data points
+                const allYValues = [];
+                [markData, emaData, vwapData].forEach(data => {
+                    data.forEach(d => {
+                        if (d && typeof d.y === 'number' && Number.isFinite(d.y)) {
+                            allYValues.push(d.y);
+                        }
+                    });
+                });
+                
+                // Update chart data
+                this.priceChart.data.datasets = datasets;
+                
+                // Update Y-axis range if we have data
+                if (allYValues.length > 0) {
+                    const minY = Math.min(...allYValues);
+                    const maxY = Math.max(...allYValues);
+                    const range = maxY - minY;
+                    const padding = range < 10 ? Math.max(range * 0.2, 10) : Math.max(range * 0.1, 5);
+                    
+                    this.priceChart.options.scales.y.min = minY - padding;
+                    this.priceChart.options.scales.y.max = maxY + padding;
+                } else {
+                    this.priceChart.options.scales.y.min = undefined;
+                    this.priceChart.options.scales.y.max = undefined;
+                }
+                
+                // Update chart
+                this.priceChart.update('none'); // 'none' = no animation
             }
             
+            // Restore VWAP chart from history with Chart.js
             if (this.priceHistory.length > 0 && this.vwapChart) {
-                const vwapSeriesData = this.priceHistory.map(p => ({
-                    x: p.timestamp,
-                    y: p.vwap
-                }));
+                // Ensure data is sorted by timestamp - use ALL available data
+                const sortedHistory = [...this.priceHistory].sort((a, b) => a.timestamp - b.timestamp);
+                const vwapData = sortedHistory
+                    .filter(p => p.vwap != null && !isNaN(p.vwap) && typeof p.timestamp === 'number' && Number.isFinite(p.vwap) && Number.isFinite(p.timestamp))
+                    .map(p => ({ x: Number(p.timestamp), y: Number(p.vwap) }));
                 
-                this.vwapChart.updateSeries([{
-                    name: 'VWAP (€/MWh)',
-                    data: vwapSeriesData
-                }], false, true);
+                // Update chart data
+                if (vwapData.length >= 2) {
+                    this.vwapChart.data.datasets[0].data = vwapData;
+                    this.vwapChart.update('none'); // 'none' = no animation
+                }
             }
         }
 
@@ -1067,11 +1474,862 @@
                 document.getElementById('settingsModal').remove();
             });
         }
+
+        initLongtermChart() {
+            // Initialize long-term chart with Chart.js
+            // CRITICAL: Destroy existing chart instance first to prevent double rendering
+            if (this.longtermChart) {
+                this.longtermChart.destroy();
+                this.longtermChart = null;
+            }
+            
+            // Clear container
+            const container = document.querySelector("#longtermChart");
+            if (container) {
+                container.innerHTML = "";
+            }
+            
+            this.currentDays = 7;
+            this.aggregation = 'hour';
+            this.longtermHistory = [];
+            this.longtermAvg = 0;
+            this.longtermVolatility = 0;
+            
+            // Ensure container is ready
+            const containerEl = document.querySelector("#longtermChart");
+            if (!containerEl) {
+                console.error('Longterm chart container not found!');
+                return;
+            }
+            
+            // Set canvas size explicitly
+            const containerHeight = 384; // h-96 = 384px
+            containerEl.style.width = '100%';
+            containerEl.style.height = containerHeight + 'px';
+            containerEl.width = containerEl.offsetWidth || containerEl.parentElement.offsetWidth;
+            containerEl.height = containerHeight;
+            
+            try {
+                // Create Chart.js instance
+                const ctx = containerEl.getContext('2d');
+                this.longtermChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: []
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        },
+                        plugins: {
+                            legend: {
+                                display: false // Hidden by default, shown when data is loaded
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleColor: '#ffffff',
+                                bodyColor: '#ffffff',
+                                borderColor: 'rgba(255, 255, 255, 0.1)',
+                                borderWidth: 1,
+                                callbacks: {
+                                    title: function(context) {
+                                        const date = new Date(context[0].parsed.x);
+                                        return date.toLocaleDateString('de-DE') + ' ' + 
+                                               String(date.getHours()).padStart(2, '0') + ':' + 
+                                               String(date.getMinutes()).padStart(2, '0');
+                                    },
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' €/MWh';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                type: 'linear',
+                                position: 'bottom',
+                                beginAtZero: false,
+                                ticks: {
+                                    color: 'hsl(0, 0%, 63.9%)',
+                                    font: {
+                                        size: 11
+                                    },
+                                    callback: function(value, index, values) {
+                                        if (typeof value !== 'number' || !Number.isFinite(value)) {
+                                            return '';
+                                        }
+                                        try {
+                                            const date = new Date(value);
+                                            if (isNaN(date.getTime()) || date.getTime() === 0) {
+                                                return '';
+                                            }
+                                            // Check if date is reasonable (not epoch 0 or invalid)
+                                            const year = date.getFullYear();
+                                            if (year < 2000 || year > 2100) {
+                                                return '';
+                                            }
+                                            const day = String(date.getDate()).padStart(2, '0');
+                                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                                            const hours = String(date.getHours()).padStart(2, '0');
+                                            const minutes = String(date.getMinutes()).padStart(2, '0');
+                                            return `${day}.${month}. ${hours}:${minutes}`;
+                                        } catch (e) {
+                                            return '';
+                                        }
+                                    },
+                                    maxTicksLimit: 10
+                                },
+                                grid: {
+                                    color: 'hsl(0, 0%, 100%, 0.08)'
+                                },
+                                min: undefined,
+                                max: undefined
+                            },
+                            y: {
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: false,
+                                suggestedMin: undefined,
+                                suggestedMax: undefined,
+                                title: {
+                                    display: true,
+                                    text: 'EUR/MWh',
+                                    color: 'hsl(0, 0%, 63.9%)',
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                ticks: {
+                                    color: 'hsl(0, 0%, 63.9%)',
+                                    font: {
+                                        size: 11
+                                    },
+                                    callback: function(value) {
+                                        if (typeof value !== 'number' || !Number.isFinite(value)) {
+                                            return '';
+                                        }
+                                        return value.toFixed(2);
+                                    }
+                                },
+                                grid: {
+                                    color: 'hsl(0, 0%, 100%, 0.08)'
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing longterm chart:', error);
+                return;
+            }
+            
+            // Load initial data after a short delay to ensure chart is fully rendered
+            setTimeout(() => {
+                this.loadLongtermData(7);
+            }, 200);
+            
+            // Setup event listeners
+            document.querySelectorAll('.longterm-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    // Prevent event from bubbling to parent header (which toggles the section)
+                    e.stopPropagation();
+                    e.preventDefault();
+                    
+                    document.querySelectorAll('.longterm-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const days = parseInt(btn.dataset.days);
+                    this.loadLongtermData(days);
+                });
+            });
+            
+            document.getElementById('showMinMax').addEventListener('change', (e) => {
+                this.updateLongtermChartVisibility();
+            });
+            
+            document.getElementById('showVolatility').addEventListener('change', (e) => {
+                this.updateLongtermChartVisibility();
+            });
+            
+            document.getElementById('showAverage').addEventListener('change', (e) => {
+                this.updateLongtermChartVisibility();
+            });
+            
+            document.getElementById('exportLongtermBtn').addEventListener('click', (e) => {
+                // Prevent event from bubbling to parent header (which toggles the section)
+                e.stopPropagation();
+                e.preventDefault();
+                
+                this.exportLongtermData();
+            });
+        }
+
+        async loadLongtermData(days) {
+            try {
+                this.currentDays = days;
+                const aggregation = days <= 7 ? 'hour' : 'day';
+                this.aggregation = aggregation;
+                
+                console.log(`📊 Loading longterm data: days=${days}, aggregation=${aggregation}`);
+                
+                // First, check current market prices to see if they're being received
+                try {
+                    const currentPriceResponse = await fetch('/api/market-data');
+                    const currentPriceData = await currentPriceResponse.json();
+                    console.log('💰 Current market prices:', {
+                        mark: currentPriceData.mark,
+                        ema: currentPriceData.ema,
+                        vwap: currentPriceData.vwap,
+                        timestamp: currentPriceData.timestamp,
+                        willBePersisted: currentPriceData.mark > 0 && currentPriceData.mark < 1000
+                    });
+                    if (currentPriceData.mark === 0 || currentPriceData.mark >= 1000) {
+                        console.warn(`⚠️ Marktpreis (${currentPriceData.mark}) erfüllt nicht die Bedingung für Persistierung (0 < mark < 1000)`);
+                    }
+                } catch (priceError) {
+                    console.error('❌ Error fetching current market prices:', priceError);
+                }
+                
+                const url = `/api/market/history/longterm?market=epex_at&days=${days}&aggregation=${aggregation}`;
+                console.log('🔗 Fetching from URL:', url);
+                
+                // Show loading status
+                const statusEl = document.getElementById('longtermStatus');
+                if (statusEl) {
+                    statusEl.textContent = '⏳ Lade Langzeit-Daten...';
+                    statusEl.className = 'text-xs text-blue-400 mt-2 text-center';
+                }
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    console.error(`❌ API Error: ${response.status} ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('❌ Error response body:', errorText);
+                    if (statusEl) {
+                        statusEl.textContent = `❌ API-Fehler: ${response.status} ${response.statusText}`;
+                        statusEl.className = 'text-xs text-red-400 mt-2 text-center';
+                    }
+                    this.updateLongtermStats([]);
+                    return;
+                }
+                
+                const data = await response.json();
+                console.log('📦 Longterm data received (RAW):', data);
+                console.log('📦 Longterm data structure:', { 
+                    count: data.count, 
+                    hasHistory: !!data.history, 
+                    historyLength: data.history ? data.history.length : 0,
+                    historyType: Array.isArray(data.history) ? 'array' : typeof data.history,
+                    error: data.error,
+                    sampleData: data.history && data.history.length > 0 ? data.history[0] : null,
+                    firstData: data.history && data.history.length > 0 ? data.history[0] : null,
+                    lastData: data.history && data.history.length > 0 ? data.history[data.history.length - 1] : null,
+                    debug: data.debug,
+                    // Check if data itself is a history item (wrong structure)
+                    isDirectHistoryItem: !data.history && (data.mark || data.ema || data.vwap)
+                });
+                
+                // Handle case where API returns single object instead of {history: [...]}
+                if (!data.history && (data.mark || data.ema || data.vwap)) {
+                    console.warn('⚠️ API returned single object instead of history array! Wrapping it.');
+                    data.history = [data];
+                    data.count = 1;
+                }
+                
+                // Show debug info if available
+                if (data.debug) {
+                    console.log('🔍 Debug Info:', {
+                        total_records: data.debug.total_records,
+                        records_in_range: data.debug.records_in_range,
+                        min_timestamp: data.debug.min_timestamp ? new Date(data.debug.min_timestamp).toISOString() : null,
+                        max_timestamp: data.debug.max_timestamp ? new Date(data.debug.max_timestamp).toISOString() : null,
+                        cutoff_timestamp: new Date(data.debug.cutoff_timestamp).toISOString(),
+                        min_date: data.debug.min_date,
+                        max_date: data.debug.max_date,
+                        cutoff_date: data.debug.cutoff_date,
+                        current_time: data.debug.current_time
+                    });
+                    
+                    // Show helpful message if we have records but they're outside the range
+                    if (data.debug.total_records > 0 && data.debug.records_in_range === 0) {
+                        if (statusEl) {
+                            const oldestDate = data.debug.min_timestamp ? new Date(data.debug.min_timestamp).toLocaleString('de-DE') : 'unbekannt';
+                            const newestDate = data.debug.max_timestamp ? new Date(data.debug.max_timestamp).toLocaleString('de-DE') : 'unbekannt';
+                            statusEl.innerHTML = `ℹ️ <strong>${data.debug.total_records}</strong> Datensätze in der Datenbank, aber außerhalb des Zeitraums (${days} Tag(e)).<br>Ältester Datensatz: ${oldestDate}<br>Neuester Datensatz: ${newestDate}`;
+                            statusEl.className = 'text-xs text-yellow-400 mt-2 text-center';
+                        }
+                    } else if (data.debug.total_records === 0) {
+                        // No records at all - check if prices are being received
+                        if (statusEl) {
+                            statusEl.innerHTML = `⚠️ <strong>Keine Daten in der Datenbank!</strong><br>Prüfe, ob Marktpreise empfangen werden. Öffne die Browser-Konsole für Details.`;
+                            statusEl.className = 'text-xs text-red-400 mt-2 text-center';
+                        }
+                        // Also fetch debug endpoint for more info
+                        fetch('/api/market/history/debug?market=epex_at')
+                            .then(r => r.json())
+                            .then(debugData => {
+                                console.log('🔍 Database Debug Info:', debugData);
+                                if (debugData.table_exists === false) {
+                                    if (statusEl) {
+                                        statusEl.innerHTML = `❌ <strong>Datenbank-Tabelle existiert nicht!</strong><br>Der Exchange-Server muss gestartet werden, um die Tabelle zu erstellen.`;
+                                        statusEl.className = 'text-xs text-red-400 mt-2 text-center';
+                                    }
+                                }
+                            })
+                            .catch(err => console.error('Error fetching debug info:', err));
+                    }
+                }
+                
+                if (data.error) {
+                    console.error('❌ Longterm API error:', data.error);
+                    if (data.traceback) {
+                        console.error('❌ Traceback:', data.traceback);
+                    }
+                    if (statusEl) {
+                        if (data.error.includes('does not exist yet')) {
+                            statusEl.textContent = `ℹ️ Datenbank wird initialisiert. Bitte warten Sie, bis Marktpreise empfangen werden (normalerweise innerhalb weniger Minuten).`;
+                        } else {
+                            statusEl.textContent = `⚠️ ${data.error}`;
+                        }
+                        statusEl.className = 'text-xs text-yellow-400 mt-2 text-center';
+                    }
+                }
+                
+                if (data.history && data.history.length > 0) {
+                    console.log(`✅ Processing ${data.history.length} data points for longterm chart`);
+                    console.log('📊 Sample data point:', data.history[0]);
+                    
+                    // Convert to Chart.js format: {x: timestamp, y: value} objects
+                    // CRITICAL: Handle timestamps as both numbers and strings (ISO date strings)
+                    // CRITICAL: Convert timestamps to milliseconds if needed
+                    const parseTimestamp = (ts) => {
+                        if (typeof ts === 'number') {
+                            // If already a number, assume it's milliseconds
+                            return Number.isFinite(ts) ? ts : null;
+                        } else if (typeof ts === 'string') {
+                            // Try to parse as ISO date string
+                            const date = new Date(ts);
+                            return isNaN(date.getTime()) ? null : date.getTime();
+                        }
+                        return null;
+                    };
+                    
+                    const markData = data.history
+                        .map(p => {
+                            const ts = parseTimestamp(p.timestamp);
+                            const mark = p.mark != null ? Number(p.mark) : null;
+                            if (ts != null && mark != null && Number.isFinite(mark)) {
+                                return { x: ts, y: mark };
+                            }
+                            return null;
+                        })
+                        .filter(p => p != null)
+                        .sort((a, b) => a.x - b.x);
+                    
+                    const emaData = data.history
+                        .map(p => {
+                            const ts = parseTimestamp(p.timestamp);
+                            const ema = p.ema != null ? Number(p.ema) : null;
+                            if (ts != null && ema != null && Number.isFinite(ema)) {
+                                return { x: ts, y: ema };
+                            }
+                            return null;
+                        })
+                        .filter(p => p != null)
+                        .sort((a, b) => a.x - b.x);
+                    
+                    const vwapData = data.history
+                        .map(p => {
+                            const ts = parseTimestamp(p.timestamp);
+                            const vwap = p.vwap != null ? Number(p.vwap) : null;
+                            if (ts != null && vwap != null && Number.isFinite(vwap)) {
+                                return { x: ts, y: vwap };
+                            }
+                            return null;
+                        })
+                        .filter(p => p != null)
+                        .sort((a, b) => a.x - b.x);
+                    
+                    const maxData = data.history
+                        .map(p => {
+                            const ts = parseTimestamp(p.timestamp);
+                            const max = p.mark_max != null ? Number(p.mark_max) : null;
+                            if (ts != null && max != null && Number.isFinite(max)) {
+                                return { x: ts, y: max };
+                            }
+                            return null;
+                        })
+                        .filter(p => p != null)
+                        .sort((a, b) => a.x - b.x);
+                    
+                    const minData = data.history
+                        .map(p => {
+                            const ts = parseTimestamp(p.timestamp);
+                            const min = p.mark_min != null ? Number(p.mark_min) : null;
+                            if (ts != null && min != null && Number.isFinite(min)) {
+                                return { x: ts, y: min };
+                            }
+                            return null;
+                        })
+                        .filter(p => p != null)
+                        .sort((a, b) => a.x - b.x);
+                    
+                    console.log('📊 Data arrays after filtering:', {
+                        markData: markData.length,
+                        emaData: emaData.length,
+                        vwapData: vwapData.length,
+                        maxData: maxData.length,
+                        minData: minData.length,
+                        markSample: markData.slice(0, 2),
+                        emaSample: emaData.slice(0, 2),
+                        rawHistorySample: data.history.slice(0, 2),
+                        rawHistoryLength: data.history.length
+                    });
+                    
+                    if (markData.length === 0 && data.history.length > 0) {
+                        console.warn('⚠️ No markData after filtering! Raw history sample:', data.history[0]);
+                        console.warn('⚠️ Timestamp type:', typeof data.history[0]?.timestamp, 'Value:', data.history[0]?.timestamp);
+                    }
+                    
+                    // Calculate volatility bands (Bollinger Bands: ±2σ)
+                    const marks = data.history.map(p => p.mark).filter(m => m != null && !isNaN(m));
+                    if (marks.length > 0) {
+                        const avg = marks.reduce((a, b) => a + b, 0) / marks.length;
+                        const variance = marks.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / marks.length;
+                        const stdDev = Math.sqrt(variance);
+                        
+                        const volatilityUpper = data.history
+                            .map(p => {
+                                const ts = parseTimestamp(p.timestamp);
+                                return ts != null ? { x: ts, y: avg + (2 * stdDev) } : null;
+                            })
+                            .filter(p => p != null);
+                        const volatilityLower = data.history
+                            .map(p => {
+                                const ts = parseTimestamp(p.timestamp);
+                                return ts != null ? { x: ts, y: avg - (2 * stdDev) } : null;
+                            })
+                            .filter(p => p != null);
+                        
+                        // Build datasets for Chart.js - show data even with single point
+                        const datasets = [];
+                        
+                        // Helper function to create dataset config
+                        const createDataset = (label, data, color, isDashed = false, isVolatility = false) => {
+                            if (data.length === 0) return null;
+                            
+                            // For single point, show as point; for multiple points, show as line
+                            const showAsPoint = data.length === 1;
+                            
+                            return {
+                                label: label,
+                                data: data,
+                                borderColor: color,
+                                backgroundColor: color.replace('hsl(', 'hsla(').replace(')', ', 0.1)'),
+                                borderWidth: isVolatility ? 1 : 2,
+                                tension: showAsPoint ? 0 : 0.3,
+                                fill: false,
+                                borderDash: isDashed ? (isVolatility ? [10, 10] : [5, 5]) : [],
+                                pointRadius: showAsPoint ? 6 : 0, // Show point if only one data point
+                                pointHoverRadius: 8,
+                                pointBackgroundColor: color,
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2
+                            };
+                        };
+                        
+                        // Add main data series (always show if data exists)
+                        if (markData.length > 0) {
+                            const dataset = createDataset('Markt Preis (Durchschnitt)', markData, 'hsl(142, 100%, 50%)');
+                            if (dataset) datasets.push(dataset);
+                        }
+                        
+                        if (emaData.length > 0) {
+                            const dataset = createDataset('EMA (Durchschnitt)', emaData, 'hsl(217, 100%, 60%)');
+                            if (dataset) datasets.push(dataset);
+                        }
+                        
+                        if (vwapData.length > 0) {
+                            const dataset = createDataset('VWAP (Durchschnitt)', vwapData, 'hsl(0, 100%, 60%)');
+                            if (dataset) datasets.push(dataset);
+                        }
+                        
+                        // Min/Max and volatility bands only make sense with multiple points
+                        if (maxData.length >= 2) {
+                            const dataset = createDataset('Maximum', maxData, 'hsl(142, 100%, 70%)', true);
+                            if (dataset) datasets.push(dataset);
+                        }
+                        
+                        if (minData.length >= 2) {
+                            const dataset = createDataset('Minimum', minData, 'hsl(142, 100%, 30%)', true);
+                            if (dataset) datasets.push(dataset);
+                        }
+                        
+                        if (volatilityUpper.length >= 2) {
+                            const dataset = createDataset('Volatilität +2σ', volatilityUpper, 'hsl(217, 100%, 70%)', true, true);
+                            if (dataset) datasets.push(dataset);
+                        }
+                        
+                        if (volatilityLower.length >= 2) {
+                            const dataset = createDataset('Volatilität -2σ', volatilityLower, 'hsl(217, 100%, 70%)', true, true);
+                            if (dataset) datasets.push(dataset);
+                        }
+                        
+                        // Only update if we have datasets with data
+                        if (datasets.length > 0) {
+                            console.log('✅ Updating chart with datasets:', datasets.length, 'datasets');
+                            datasets.forEach((ds, idx) => {
+                                console.log(`  Dataset ${idx}: ${ds.label}, ${ds.data.length} points`);
+                                if (ds.data.length > 0) {
+                                    console.log(`    First point: x=${ds.data[0].x}, y=${ds.data[0].y}`);
+                                    if (ds.data.length > 1) {
+                                        console.log(`    Last point: x=${ds.data[ds.data.length-1].x}, y=${ds.data[ds.data.length-1].y}`);
+                                    }
+                                }
+                            });
+                            
+                            // Update chart data
+                            this.longtermChart.data.datasets = datasets;
+                            
+                            // Set X-axis min/max based on actual data
+                            const allTimestamps = [];
+                            datasets.forEach(dataset => {
+                                if (dataset.data && dataset.data.length > 0) {
+                                    dataset.data.forEach(point => {
+                                        if (point && typeof point.x === 'number' && Number.isFinite(point.x)) {
+                                            allTimestamps.push(point.x);
+                                        }
+                                    });
+                                }
+                            });
+                            
+                            if (allTimestamps.length > 0) {
+                                const minTimestamp = Math.min(...allTimestamps);
+                                const maxTimestamp = Math.max(...allTimestamps);
+                                
+                                // If only one point, add padding around it (e.g., ±1 hour)
+                                if (allTimestamps.length === 1) {
+                                    const padding = 60 * 60 * 1000; // 1 hour in milliseconds
+                                    this.longtermChart.options.scales.x.min = minTimestamp - padding;
+                                    this.longtermChart.options.scales.x.max = maxTimestamp + padding;
+                                } else {
+                                    // For multiple points, use actual range with small padding
+                                    const range = maxTimestamp - minTimestamp;
+                                    const padding = range * 0.05; // 5% padding
+                                    this.longtermChart.options.scales.x.min = minTimestamp - padding;
+                                    this.longtermChart.options.scales.x.max = maxTimestamp + padding;
+                                }
+                            } else {
+                                this.longtermChart.options.scales.x.min = undefined;
+                                this.longtermChart.options.scales.x.max = undefined;
+                            }
+                            
+                            // Show legend when we have data
+                            this.longtermChart.options.plugins.legend.display = true;
+                            
+                            // Update chart
+                            console.log('🔄 Calling chart.update()...');
+                            console.log('📊 Chart state before update:', {
+                                datasetsCount: this.longtermChart.data.datasets.length,
+                                totalPoints: this.longtermChart.data.datasets.reduce((sum, ds) => sum + (ds.data ? ds.data.length : 0), 0),
+                                xMin: this.longtermChart.options.scales.x.min,
+                                xMax: this.longtermChart.options.scales.x.max
+                            });
+                            
+                            this.longtermChart.update('none'); // 'none' = no animation
+                            console.log('✅ Chart updated!');
+                            
+                            // Force a resize and re-render to ensure chart displays
+                            setTimeout(() => {
+                                if (this.longtermChart) {
+                                    this.longtermChart.resize();
+                                    this.longtermChart.update('none');
+                                    console.log('📐 Chart resized and re-rendered');
+                                    
+                                    // Check if chart actually has data after update
+                                    const hasData = this.longtermChart.data.datasets.some(ds => ds.data && ds.data.length > 0);
+                                    if (!hasData) {
+                                        console.error('❌ Chart has no data after update!');
+                                    } else {
+                                        console.log('✅ Chart has data:', this.longtermChart.data.datasets.map(ds => ({
+                                            label: ds.label,
+                                            points: ds.data ? ds.data.length : 0
+                                        })));
+                                    }
+                                }
+                            }, 100);
+                        } else {
+                            console.warn('⚠️ No datasets to display! markData.length:', markData.length, 'emaData.length:', emaData.length, 'vwapData.length:', vwapData.length);
+                            // No data - clear datasets and hide legend
+                            this.longtermChart.data.datasets = [];
+                            // Reset X-axis to auto-scale
+                            this.longtermChart.options.scales.x.min = undefined;
+                            this.longtermChart.options.scales.x.max = undefined;
+                            this.longtermChart.options.plugins.legend.display = false;
+                            this.longtermChart.update('none');
+                        }
+                    }
+                    
+                    // Calculate and display statistics
+                    this.updateLongtermStats(data.history);
+                    
+                    // Clear status message on success
+                    const statusEl = document.getElementById('longtermStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '';
+                    }
+                } else {
+                    console.warn('⚠️ No history data received or empty array', data);
+                    // Enhanced debug output
+                    if (data.debug) {
+                        console.error('🔍 DEBUG INFO:', {
+                            total_records: data.debug.total_records,
+                            records_in_range: data.debug.records_in_range,
+                            min_timestamp: data.debug.min_timestamp,
+                            max_timestamp: data.debug.max_timestamp,
+                            cutoff_timestamp: data.debug.cutoff_timestamp,
+                            min_date: data.debug.min_date,
+                            max_date: data.debug.max_date,
+                            cutoff_date: data.debug.cutoff_date,
+                            current_time: data.debug.current_time
+                        });
+                        
+                        // If we have records but none in range, show helpful message
+                        if (data.debug.total_records > 0 && data.debug.records_in_range === 0) {
+                            console.error(`⚠️ ${data.debug.total_records} Datensätze in DB, aber außerhalb des Zeitraums!`);
+                            console.error(`   Ältester Datensatz: ${data.debug.min_date || 'unbekannt'}`);
+                            console.error(`   Neuester Datensatz: ${data.debug.max_date || 'unbekannt'}`);
+                            console.error(`   Cutoff (${days} Tage): ${data.debug.cutoff_date || 'unbekannt'}`);
+                        } else if (data.debug.total_records === 0) {
+                            console.error('❌ KEINE DATEN IN DER DATENBANK!');
+                            console.error('   Prüfe Exchange-Server-Logs, ob Preise gespeichert werden.');
+                            console.error('   Prüfe, ob mark > 0 und mark < 1000 (Bedingung für Persistierung).');
+                        }
+                    } else {
+                        console.error('⚠️ Keine Debug-Informationen in der Antwort!');
+                    }
+                    console.log('📋 API Response details:', {
+                        hasHistory: !!data.history,
+                        historyLength: data.history ? data.history.length : 0,
+                        count: data.count,
+                        error: data.error,
+                        market: data.market,
+                        days: data.days,
+                        aggregation: data.aggregation
+                    });
+                    
+                    // Show user-friendly message if no data
+                    if (statusEl) {
+                        if (data.error) {
+                            if (data.error.includes('does not exist yet')) {
+                                statusEl.textContent = `ℹ️ Datenbank wird initialisiert. Bitte warten Sie, bis Marktpreise empfangen werden (normalerweise innerhalb weniger Minuten).`;
+                            } else {
+                                statusEl.textContent = `⚠️ ${data.error}`;
+                            }
+                            statusEl.className = 'text-xs text-yellow-400 mt-2 text-center';
+                        } else if (data.count === 0) {
+                            statusEl.textContent = `ℹ️ Keine historischen Daten für ${data.days} Tag(e) verfügbar. Daten werden gesammelt, sobald Marktpreise empfangen werden. Prüfen Sie, ob der Exchange-Server läuft und Marktpreise empfängt.`;
+                            statusEl.className = 'text-xs text-gray-400 mt-2 text-center';
+                        } else {
+                            statusEl.textContent = `ℹ️ Keine historischen Daten verfügbar (${data.count} Datensätze gefunden, aber leer).`;
+                            statusEl.className = 'text-xs text-gray-400 mt-2 text-center';
+                        }
+                    }
+                    
+                    // Update chart with empty data - no datasets, no legend
+                    if (this.longtermChart) {
+                        // Clear all datasets
+                        this.longtermChart.data.datasets = [];
+                        // Hide legend
+                        this.longtermChart.options.plugins.legend.display = false;
+                        this.longtermChart.update('none');
+                    }
+                    this.updateLongtermStats([]);
+                }
+            } catch (error) {
+                console.error('Error loading long-term data:', error);
+                console.error('Error details:', error.stack);
+                // Update stats with empty data on error
+                this.updateLongtermStats([]);
+            }
+        }
+
+        updateLongtermStats(history) {
+            if (!history || history.length === 0) {
+                // Reset stats to default when no data
+                document.getElementById('statAvg').textContent = '--';
+                document.getElementById('statMax').textContent = '--';
+                document.getElementById('statMin').textContent = '--';
+                document.getElementById('statVol').textContent = '--';
+                this.longtermHistory = [];
+                return;
+            }
+            
+            const marks = history.map(p => p.mark).filter(m => m != null && !isNaN(m));
+            if (marks.length === 0) {
+                document.getElementById('statAvg').textContent = '--';
+                document.getElementById('statMax').textContent = '--';
+                document.getElementById('statMin').textContent = '--';
+                document.getElementById('statVol').textContent = '--';
+                return;
+            }
+            
+            const avg = marks.reduce((a, b) => a + b, 0) / marks.length;
+            const max = Math.max(...marks);
+            const min = Math.min(...marks);
+            
+            // Calculate volatility (standard deviation)
+            // Use sample standard deviation (n-1) for better accuracy with small datasets
+            const variance = marks.length > 1 
+                ? marks.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / (marks.length - 1)
+                : 0;
+            const volatility = Math.sqrt(variance);
+            
+            // Format values with appropriate precision
+            const formatValue = (val) => {
+                if (val === 0 || (val >= 0.01 && val < 1000)) {
+                    return val.toFixed(2);
+                } else {
+                    return val.toFixed(0);
+                }
+            };
+            
+            document.getElementById('statAvg').textContent = formatValue(avg) + ' EUR/MWh';
+            document.getElementById('statMax').textContent = formatValue(max) + ' EUR/MWh';
+            document.getElementById('statMin').textContent = formatValue(min) + ' EUR/MWh';
+            document.getElementById('statVol').textContent = formatValue(volatility) + ' EUR/MWh';
+            
+            // Log warning if all values are the same (only one unique value)
+            const uniqueValues = new Set(marks);
+            if (uniqueValues.size === 1 && marks.length > 1) {
+                console.warn('⚠️ Alle Langzeit-Datenpunkte haben den gleichen Wert:', marks[0]);
+            } else if (marks.length === 1) {
+                console.warn('⚠️ Nur ein Datenpunkt in Langzeit-Historie vorhanden');
+            }
+            
+            // Store for volatility band calculation
+            this.longtermAvg = avg;
+            this.longtermVolatility = volatility;
+            this.longtermHistory = history;
+        }
+
+        updateLongtermChartVisibility() {
+            const showMinMax = document.getElementById('showMinMax').checked;
+            const showVolatility = document.getElementById('showVolatility').checked;
+            const showAverage = document.getElementById('showAverage').checked;
+            
+            if (this.longtermChart && this.longtermChart.data && this.longtermChart.data.datasets) {
+                // Map dataset labels to visibility settings
+                const visibilityMap = {
+                    'Markt Preis (Durchschnitt)': showAverage,
+                    'EMA (Durchschnitt)': showAverage,
+                    'VWAP (Durchschnitt)': showAverage,
+                    'Maximum': showMinMax,
+                    'Minimum': showMinMax,
+                    'Volatilität +2σ': showVolatility,
+                    'Volatilität -2σ': showVolatility
+                };
+                
+                // Update dataset hidden property
+                this.longtermChart.data.datasets.forEach((dataset, index) => {
+                    const shouldShow = visibilityMap[dataset.label] !== false;
+                    this.longtermChart.setDatasetVisibility(index, shouldShow);
+                });
+                
+                this.longtermChart.update('none');
+            }
+        }
+
+        exportLongtermData() {
+            if (!this.longtermHistory || this.longtermHistory.length === 0) {
+                alert('Keine Daten zum Exportieren verfügbar');
+                return;
+            }
+            
+            const format = confirm('JSON-Format verwenden? (OK = JSON, Abbrechen = CSV)') ? 'json' : 'csv';
+            
+            if (format === 'json') {
+                const data = {
+                    market: 'epex_at',
+                    days: this.currentDays,
+                    aggregation: this.aggregation,
+                    exported_at: new Date().toISOString(),
+                    count: this.longtermHistory.length,
+                    statistics: {
+                        average: this.longtermAvg,
+                        volatility: this.longtermVolatility,
+                        max: Math.max(...this.longtermHistory.map(p => p.mark)),
+                        min: Math.min(...this.longtermHistory.map(p => p.mark))
+                    },
+                    history: this.longtermHistory
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `phoenyra_longterm_${this.currentDays}d_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } else {
+                // CSV format
+                const csv = [
+                    'timestamp,mark,ema,vwap,mark_min,mark_max,data_points',
+                    ...this.longtermHistory.map(p => 
+                        `${p.timestamp},${p.mark},${p.ema},${p.vwap},${p.mark_min},${p.mark_max},${p.data_points || 0}`
+                    )
+                ].join('\n');
+                
+                const blob = new Blob([csv], {type: 'text/csv'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `phoenyra_longterm_${this.currentDays}d_${Date.now()}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+        }
     }
 
     // Initialize dashboard when page loads
+    // Toggle function for longterm section
+    function toggleLongtermSection() {
+        const content = document.getElementById('longtermContent');
+        const chevron = document.getElementById('longtermChevron');
+        
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            chevron.classList.remove('fa-chevron-right');
+            chevron.classList.add('fa-chevron-down');
+        } else {
+            content.style.display = 'none';
+            chevron.classList.remove('fa-chevron-down');
+            chevron.classList.add('fa-chevron-right');
+        }
+        
+        // Save state to localStorage
+        localStorage.setItem('longtermCollapsed', content.style.display === 'none');
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
-        new DashboardData();
+        window.dashboardData = new DashboardData();
+        
+        // Load collapse state from localStorage
+        const longtermCollapsed = localStorage.getItem('longtermCollapsed') === 'true';
+        if (longtermCollapsed) {
+            const content = document.getElementById('longtermContent');
+            const chevron = document.getElementById('longtermChevron');
+            if (content && chevron) {
+                content.style.display = 'none';
+                chevron.classList.remove('fa-chevron-down');
+                chevron.classList.add('fa-chevron-right');
+            }
+        }
     });
 </script>
 {% endblock %}

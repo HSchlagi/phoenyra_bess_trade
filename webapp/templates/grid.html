@@ -76,7 +76,9 @@
         <h3 class="text-lg font-bold text-white mb-4">
             <i class="fas fa-chart-line mr-2 text-green-400"></i>Netzfrequenz-Verlauf (letzten 5 Minuten)
         </h3>
-        <div id="frequency-chart"></div>
+        <div class="h-64 relative">
+            <canvas id="frequency-chart"></canvas>
+        </div>
         <div class="mt-4 grid grid-cols-3 gap-4 text-center">
             <div class="p-3 bg-red-900 bg-opacity-30 rounded-lg">
                 <p class="text-xs text-gray-400">Unterfrequenz</p>
@@ -159,91 +161,161 @@ let updateTimer;
 
 // Initialize frequency chart
 function initFrequencyChart() {
-    const options = {
-        chart: {
-            type: 'line',
-            height: 300,
-            background: 'transparent',
-            foreColor: '#fff',
-            toolbar: { show: false },
-            animations: {
-                enabled: true,
-                dynamicAnimation: {
-                    speed: 500
-                }
-            }
-        },
-        theme: { mode: 'dark' },
-        series: [{
-            name: 'Frequenz',
-            data: []
-        }],
-        colors: ['#10b981'],
-        stroke: { curve: 'smooth', width: 3 },
-        grid: {
-            borderColor: '#374151',
-            yaxis: {
-                lines: { show: true }
-            }
-        },
-        xaxis: {
-            type: 'datetime',
-            labels: {
-                format: 'HH:mm:ss',
-                datetimeUTC: false
-            }
-        },
-        yaxis: {
-            title: { text: 'Frequenz (Hz)' },
-            min: 49.7,
-            max: 50.3,
-            tickAmount: 6,
-            labels: {
-                formatter: (val) => val.toFixed(2)
-            }
-        },
-        annotations: {
-            yaxis: [
+    const canvas = document.getElementById('frequency-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Create reference lines as separate datasets
+    const now = Date.now();
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    
+    frequencyChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
                 {
-                    y: 49.8,
-                    borderColor: '#ef4444',
-                    label: {
-                        text: 'Min',
-                        style: { color: '#fff', background: '#ef4444' }
-                    }
-                },
-                {
-                    y: 50.2,
-                    borderColor: '#ef4444',
-                    label: {
-                        text: 'Max',
-                        style: { color: '#fff', background: '#ef4444' }
-                    }
-                },
-                {
-                    y: 50.0,
+                    label: 'Frequenz',
+                    data: [],
                     borderColor: '#10b981',
-                    strokeDashArray: 5,
-                    label: {
-                        text: 'Soll',
-                        style: { color: '#fff', background: '#10b981' }
-                    }
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                },
+                {
+                    label: 'Min (49.8 Hz)',
+                    data: [{ x: fiveMinutesAgo, y: 49.8 }, { x: now, y: 49.8 }],
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    fill: false
+                },
+                {
+                    label: 'Max (50.2 Hz)',
+                    data: [{ x: fiveMinutesAgo, y: 50.2 }, { x: now, y: 50.2 }],
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    fill: false
+                },
+                {
+                    label: 'Soll (50.0 Hz)',
+                    data: [{ x: fiveMinutesAgo, y: 50.0 }, { x: now, y: 50.0 }],
+                    borderColor: '#10b981',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    pointRadius: 0,
+                    pointHoverRadius: 0,
+                    fill: false
                 }
             ]
         },
-        tooltip: {
-            theme: 'dark',
-            x: {
-                format: 'HH:mm:ss'
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
             },
-            y: {
-                formatter: (val) => val.toFixed(3) + ' Hz'
+            plugins: {
+                legend: {
+                    display: true,
+                    labels: { 
+                        color: '#ffffff',
+                        filter: function(item, chart) {
+                            // Only show legend for main frequency line, hide reference lines
+                            return item.text === 'Frequenz';
+                        }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#ffffff',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    borderWidth: 1,
+                    callbacks: {
+                        title: function(context) {
+                            if (context && context.length > 0 && context[0].parsed && typeof context[0].parsed.x === 'number') {
+                                const date = new Date(context[0].parsed.x);
+                                if (!isNaN(date.getTime())) {
+                                    const hh = String(date.getHours()).padStart(2, '0');
+                                    const mm = String(date.getMinutes()).padStart(2, '0');
+                                    const ss = String(date.getSeconds()).padStart(2, '0');
+                                    return `${hh}:${mm}:${ss}`;
+                                }
+                            }
+                            return '';
+                        },
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y.toFixed(3) + ' Hz';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom',
+                    ticks: {
+                        color: '#ffffff',
+                        font: { size: 11 },
+                        callback: function(value, index, values) {
+                            if (typeof value !== 'number' || !Number.isFinite(value)) {
+                                return '';
+                            }
+                            try {
+                                const date = new Date(value);
+                                if (isNaN(date.getTime()) || date.getTime() === 0) {
+                                    return '';
+                                }
+                                const year = date.getFullYear();
+                                if (year < 2000 || year > 2100) {
+                                    return '';
+                                }
+                                const hh = String(date.getHours()).padStart(2, '0');
+                                const mm = String(date.getMinutes()).padStart(2, '0');
+                                const ss = String(date.getSeconds()).padStart(2, '0');
+                                return `${hh}:${mm}:${ss}`;
+                            } catch (e) {
+                                return '';
+                            }
+                        },
+                        maxTicksLimit: 10
+                    },
+                    grid: { color: '#374151' }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Frequenz (Hz)',
+                        color: '#ffffff',
+                        font: { size: 12 }
+                    },
+                    min: 49.7,
+                    max: 50.3,
+                    ticks: {
+                        color: '#ffffff',
+                        font: { size: 11 },
+                        stepSize: 0.1,
+                        callback: function(value) {
+                            return value.toFixed(2);
+                        }
+                    },
+                    grid: { color: '#374151' }
+                }
             }
         }
-    };
-
-    frequencyChart = new ApexCharts(document.querySelector("#frequency-chart"), options);
-    frequencyChart.render();
+    });
 }
 
 async function fetchGridData() {
@@ -317,6 +389,8 @@ function updateGridMetrics(data) {
 }
 
 function updateFrequencyChart(frequency) {
+    if (!frequencyChart) return;
+    
     const now = new Date().getTime();
     frequencyHistory.push({ x: now, y: frequency });
     
@@ -325,10 +399,16 @@ function updateFrequencyChart(frequency) {
         frequencyHistory.shift();
     }
     
-    frequencyChart.updateSeries([{
-        name: 'Frequenz',
-        data: frequencyHistory
-    }]);
+    // Update Chart.js data - main frequency line
+    frequencyChart.data.datasets[0].data = frequencyHistory.map(p => ({ x: p.x, y: p.y }));
+    
+    // Update reference lines to extend to current time
+    const fiveMinutesAgo = now - (5 * 60 * 1000);
+    frequencyChart.data.datasets[1].data = [{ x: fiveMinutesAgo, y: 49.8 }, { x: now, y: 49.8 }]; // Min
+    frequencyChart.data.datasets[2].data = [{ x: fiveMinutesAgo, y: 50.2 }, { x: now, y: 50.2 }]; // Max
+    frequencyChart.data.datasets[3].data = [{ x: fiveMinutesAgo, y: 50.0 }, { x: now, y: 50.0 }]; // Soll
+    
+    frequencyChart.update('none');
 }
 
 function updateTieLines(tieLines) {

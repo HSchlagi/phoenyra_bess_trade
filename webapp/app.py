@@ -9,10 +9,43 @@ import hashlib
 import base64
 from datetime import datetime, timedelta
 import os
+import yaml
+import logging
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'phoenyra_dashboard_secret'
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Load users from YAML
+def load_users():
+    """Load users from users.yaml file"""
+    users_path = os.path.join(os.path.dirname(__file__), 'config', 'users.yaml')
+    try:
+        with open(users_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            return config.get('users', [])
+    except FileNotFoundError:
+        logging.warning(f"Users file not found at {users_path}, using default users")
+        return [
+            {'username': 'admin', 'password': 'admin123', 'role': 'admin'},
+            {'username': 'trader', 'password': 'trader123', 'role': 'trader'},
+            {'username': 'viewer', 'password': 'viewer123', 'role': 'viewer'}
+        ]
+
+# Load users on startup
+app.users = load_users()
+
+# Import auth decorators (must be after app.users is set)
+try:
+    from auth import login_required, role_required
+except ImportError:
+    # Fallback if auth module not found
+    def login_required(f):
+        return f
+    def role_required(*roles):
+        def decorator(f):
+            return f
+        return decorator
 
 # API Configuration
 EXCHANGE_BASE_URL = os.getenv('EXCHANGE_BASE_URL', 'http://exchange:9000')
@@ -64,7 +97,46 @@ class TradingAPI:
 # Initialize API client
 trading_api = TradingAPI(EXCHANGE_BASE_URL, API_KEY)
 
+# ============================================================================
+# Authentication Routes
+# ============================================================================
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login-Seite"""
+    if request.method == 'POST':
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        
+        for user in app.users:
+            if user.get('username') == username and user.get('password') == password:
+                session['user'] = {
+                    'name': username,
+                    'role': user.get('role', 'viewer')
+                }
+                logging.info(f"User logged in: {username}")
+                next_url = request.args.get('next') or url_for('dashboard')
+                return redirect(next_url)
+        
+        logging.warning(f"Failed login attempt for user: {username}")
+        return render_template('login.html', error='Ungültige Anmeldedaten')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout"""
+    user = session.get('user', {}).get('name', 'unknown')
+    session.pop('user', None)
+    logging.info(f"User logged out: {user}")
+    return redirect(url_for('login'))
+
+# ============================================================================
+# Protected Routes
+# ============================================================================
+
 @app.route('/')
+@login_required
 def dashboard():
     return render_template('dashboard.html')
 
@@ -164,6 +236,42 @@ def sync_market_history():
             return {"market": data.get('market', 'epex_at'), "count": 0, "history": []}
     except Exception as e:
         return {"market": data.get('market', 'epex_at'), "count": 0, "history": [], "error": str(e)}
+
+@app.route('/api/market/history/longterm')
+def get_longterm_history():
+    """Get aggregated long-term market price history"""
+    try:
+        market = request.args.get('market', 'epex_at')
+        days = int(request.args.get('days', 7))
+        aggregation = request.args.get('aggregation', 'hour')
+        
+        response = requests.get(
+            f"{EXCHANGE_BASE_URL}/market/history/longterm",
+            params={'market': market, 'days': days, 'aggregation': aggregation}
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"market": market, "days": days, "aggregation": aggregation, "count": 0, "history": []}
+    except Exception as e:
+        return {"market": market, "days": days, "aggregation": aggregation, "count": 0, "history": [], "error": str(e)}
+
+@app.route('/api/market/history/debug')
+def debug_market_history():
+    """Debug endpoint to check database contents"""
+    try:
+        market = request.args.get('market', 'epex_at')
+        response = requests.get(
+            f"{EXCHANGE_BASE_URL}/market/history/debug",
+            params={'market': market},
+            timeout=10
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {"error": f"Exchange server returned {response.status_code}"}
+    except Exception as e:
+        return {"error": str(e)}
 
 @app.route('/api/orders')
 def get_orders():
@@ -319,22 +427,26 @@ def update_telemetry():
 
 # ---- BESS Telemetrie-Konfiguration ----
 @app.route('/config')
+@login_required
 def config_page():
     """BESS Telemetrie-Konfigurationsseite"""
     return render_template('config.html')
 
 @app.route('/trading-config')
+@login_required
 def trading_config():
     """Trading-Plattform Konfigurationsseite"""
     return render_template('trading-config.html')
 
 @app.route('/trading-bridge-konzept')
+@login_required
 def trading_bridge_konzept():
     """Trading-Bridge Konzept Dokumentation"""
     return render_template('trading-bridge-konzept.html')
 
 # ---- Forecast Dashboard ----
 @app.route('/forecast')
+@login_required
 def forecast_page():
     """Forecast Dashboard Seite"""
     return render_template('forecast.html')
@@ -370,6 +482,7 @@ def get_forecast_status(job_id):
 
 # ---- Risk Dashboard ----
 @app.route('/risk')
+@login_required
 def risk_page():
     """Risk Dashboard Seite"""
     return render_template('risk.html')
@@ -395,6 +508,7 @@ def get_risk_limits():
 
 # ---- Grid Dashboard ----
 @app.route('/grid')
+@login_required
 def grid_page():
     """Grid Dashboard Seite"""
     return render_template('grid.html')
@@ -421,6 +535,7 @@ def get_grid_constraints():
 
 # ---- Credit Dashboard ----
 @app.route('/credit')
+@login_required
 def credit_page():
     """Credit Dashboard Seite"""
     return render_template('credit.html')
@@ -447,6 +562,7 @@ def set_credit_limit():
 
 # ---- Billing Dashboard ----
 @app.route('/billing')
+@login_required
 def billing_page():
     """Billing Dashboard Seite"""
     return render_template('billing.html')

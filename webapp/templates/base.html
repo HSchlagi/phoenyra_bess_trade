@@ -4,9 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Phoenyra BESS Trade Dashboard{% endblock %}</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='phoenyra_logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='phoenyra_logo.png') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         /* Magic UI Styles */
@@ -249,6 +252,172 @@
             box-shadow: 0 2px 8px rgba(255, 215, 0, 0.15);
         }
         
+        /* Shadcn-inspired Components */
+        .shadcn-card {
+            background: hsl(222.2, 47.4%, 11.2%);
+            border: 1px solid hsl(217.2, 32.6%, 17.5%);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .shadcn-card:hover {
+            border-color: hsl(217.2, 32.6%, 25%);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .shadcn-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border: none;
+            cursor: pointer;
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.25rem;
+        }
+        
+        .shadcn-btn:focus-visible {
+            outline: 2px solid hsl(217.2, 91.2%, 59.8%);
+            outline-offset: 2px;
+        }
+        
+        .shadcn-btn-primary {
+            background-color: hsl(217.2, 91.2%, 59.8%);
+            color: white;
+        }
+        
+        .shadcn-btn-primary:hover {
+            background-color: hsl(217.2, 91.2%, 54%);
+        }
+        
+        .shadcn-btn-primary:active {
+            background-color: hsl(217.2, 91.2%, 50%);
+        }
+        
+        .shadcn-btn-secondary {
+            background-color: hsl(217.2, 32.6%, 17.5%);
+            color: hsl(0, 0%, 98%);
+            border: 1px solid hsl(217.2, 32.6%, 25%);
+        }
+        
+        .shadcn-btn-secondary:hover {
+            background-color: hsl(217.2, 32.6%, 20%);
+            border-color: hsl(217.2, 32.6%, 30%);
+        }
+        
+        .shadcn-btn-destructive {
+            background-color: hsl(0, 84.2%, 60.2%);
+            color: white;
+        }
+        
+        .shadcn-btn-destructive:hover {
+            background-color: hsl(0, 84.2%, 55%);
+        }
+        
+        .shadcn-btn-destructive:active {
+            background-color: hsl(0, 84.2%, 50%);
+        }
+        
+        .shadcn-input {
+            display: block;
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid hsl(217.2, 32.6%, 17.5%);
+            background-color: hsl(222.2, 47.4%, 11.2%);
+            color: hsl(0, 0%, 98%);
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            transition: all 0.2s ease;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        .shadcn-input::placeholder {
+            color: hsl(0, 0%, 63.9%);
+        }
+        
+        .shadcn-input:focus {
+            outline: none;
+            border-color: hsl(217.2, 91.2%, 59.8%);
+            box-shadow: 0 0 0 2px hsl(217.2, 91.2%, 59.8%, 0.2);
+        }
+        
+        .shadcn-input:hover {
+            border-color: hsl(217.2, 32.6%, 25%);
+        }
+        
+        .longterm-btn.active {
+            background-color: hsl(217.2, 91.2%, 59.8%);
+            color: white;
+            border-color: hsl(217.2, 91.2%, 59.8%);
+        }
+        
+        .longterm-btn.active:hover {
+            background-color: hsl(217.2, 91.2%, 54%);
+        }
+        
+        /* Chart.js Canvas Size Fix - Prevent infinite height */
+        /* Container divs with fixed height */
+        #priceChart,
+        #vwapChart,
+        #longtermChart {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+        
+        /* Ensure chart containers have fixed height */
+        #priceChart {
+            max-height: 256px !important; /* h-64 = 256px */
+            height: 256px !important;
+        }
+        
+        #vwapChart {
+            max-height: 256px !important; /* h-64 = 256px */
+            height: 256px !important;
+        }
+        
+        #longtermChart {
+            max-height: 384px !important; /* h-96 = 384px */
+            height: 384px !important;
+        }
+        
+        /* Ensure parent divs have correct height */
+        .h-64 {
+            height: 256px !important;
+            max-height: 256px !important;
+            overflow: hidden !important;
+        }
+        
+        .h-96 {
+            height: 384px !important;
+            max-height: 384px !important;
+            overflow: hidden !important;
+        }
+        
+        /* Ensure chart container divs have correct height - use class selector */
+        div.h-64 {
+            height: 256px !important;
+            max-height: 256px !important;
+            overflow: hidden !important;
+            position: relative !important;
+        }
+        
+        div.h-96 {
+            height: 384px !important;
+            max-height: 384px !important;
+            overflow: hidden !important;
+            position: relative !important;
+        }
+        
+        /* ApexCharts CSS removed - now using Chart.js */
+        
     </style>
 </head>
 <body class="bg-gray-900 min-h-screen gold-bg" data-theme="dark">
@@ -265,43 +434,53 @@
                         </h1>
                     </div>
                     <div class="hidden md:block">
-                        <div class="ml-10 flex items-baseline space-x-4">
-                            <a href="/" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/">
-                                <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
+                        <div class="ml-10 flex items-baseline space-x-2">
+                            <a href="/" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/" title="Dashboard">
+                                <i class="fas fa-tachometer-alt mr-1"></i><span class="hidden lg:inline">Dashboard</span>
                             </a>
-                            <a href="/config" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/config">
-                                <i class="fas fa-cog mr-1"></i>Konfiguration
+                            <a href="/forecast" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/forecast" title="Forecast">
+                                <i class="fas fa-crystal-ball mr-1"></i><span class="hidden lg:inline">Forecast</span>
                             </a>
-                            <a href="/forecast" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/forecast">
-                                <i class="fas fa-crystal-ball mr-1"></i>Forecast
+                            <a href="/risk" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/risk" title="Risk">
+                                <i class="fas fa-shield-alt mr-1"></i><span class="hidden lg:inline">Risk</span>
                             </a>
-                            <a href="/risk" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/risk">
-                                <i class="fas fa-shield-alt mr-1"></i>Risk
+                            <a href="/grid" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/grid" title="Grid">
+                                <i class="fas fa-plug mr-1"></i><span class="hidden lg:inline">Grid</span>
                             </a>
-                            <a href="/grid" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/grid">
-                                <i class="fas fa-plug mr-1"></i>Grid
+                            <a href="/credit" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/credit" title="Credit">
+                                <i class="fas fa-wallet mr-1"></i><span class="hidden lg:inline">Credit</span>
                             </a>
-                            <a href="/credit" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/credit">
-                                <i class="fas fa-wallet mr-1"></i>Credit
+                            <a href="/billing" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/billing" title="Billing">
+                                <i class="fas fa-file-invoice-dollar mr-1"></i><span class="hidden lg:inline">Billing</span>
                             </a>
-                            <a href="/billing" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/billing">
-                                <i class="fas fa-file-invoice-dollar mr-1"></i>Billing
+                            <a href="/config" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/config" title="Konfiguration">
+                                <i class="fas fa-cog mr-1"></i><span class="hidden lg:inline">Config</span>
                             </a>
-                            <a href="/trading-config" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300" data-path="/trading-config">
-                                <i class="fas fa-key mr-1"></i>Trading-Config
+                            <a href="/trading-config" class="nav-link text-white hover:bg-white hover:bg-opacity-20 px-2 py-2 rounded-md text-xs font-medium transition-all duration-300" data-path="/trading-config" title="Trading-Config">
+                                <i class="fas fa-key mr-1"></i><span class="hidden lg:inline">Trading</span>
                             </a>
                         </div>
                     </div>
                 </div>
                 <div class="flex items-center">
-                    <div class="flex items-center space-x-4">
-                        <span class="text-white text-sm" id="connection-status">
+                    <div class="flex items-center space-x-2">
+                        {% if session.user %}
+                        <div class="flex items-center space-x-2 bg-gray-700 bg-opacity-50 px-2 py-1 rounded-md">
+                            <i class="fas fa-user text-blue-400 text-xs"></i>
+                            <span class="text-white text-xs">{{ session.user.name }}</span>
+                            <span class="text-gray-400 text-xs">({{ session.user.role }})</span>
+                        </div>
+                        <a href="/logout" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-300" title="Abmelden">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                        {% endif %}
+                        <span class="text-white text-xs hidden sm:inline" id="connection-status">
                             <span class="status-indicator status-offline"></span>
-                            Verbindung wird hergestellt...
+                            <span class="hidden md:inline">Verbindung wird hergestellt...</span>
                         </span>
-                        <div class="flex flex-col items-end">
-                            <span class="text-white text-xs" id="current-date"></span>
-                            <span class="text-white text-sm font-medium" id="current-time"></span>
+                        <div class="flex flex-col items-end text-xs">
+                            <span class="text-white" id="current-date"></span>
+                            <span class="text-white font-medium" id="current-time"></span>
                         </div>
                     </div>
                 </div>

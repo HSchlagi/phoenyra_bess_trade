@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Credit Management Dashboard - Funktionsweise</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        h1 {
+            color: #60a5fa;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #3b82f6;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: #34d399;
+            font-size: 1.8em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 4px solid #10b981;
+        }
+        
+        h3 {
+            color: #fbbf24;
+            font-size: 1.4em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+        
+        h4 {
+            color: #a78bfa;
+            font-size: 1.2em;
+            margin-top: 25px;
+            margin-bottom: 12px;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 30px;
+            margin-bottom: 20px;
+        }
+        
+        li {
+            margin-bottom: 10px;
+        }
+        
+        code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #fbbf24;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: #e2e8f0;
+            font-size: 0.9em;
+        }
+        
+        .info-box {
+            background: rgba(59, 130, 246, 0.2);
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .warning-box {
+            background: rgba(251, 191, 36, 0.2);
+            border-left: 4px solid #fbbf24;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .success-box {
+            background: rgba(16, 185, 129, 0.2);
+            border-left: 4px solid #10b981;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .error-box {
+            background: rgba(239, 68, 68, 0.2);
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(15, 23, 42, 0.5);
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+        
+        th {
+            background: rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+        
+        .badge-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .badge-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .badge-error {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .badge-info {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .toc {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+        
+        .toc h3 {
+            color: #60a5fa;
+            margin-top: 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .toc li {
+            margin: 8px 0;
+        }
+        
+        .toc a {
+            color: #60a5fa;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .toc a:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+        
+        .url {
+            color: #34d399;
+            font-family: 'Courier New', monospace;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .highlight {
+            background: rgba(251, 191, 36, 0.2);
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .workflow-step {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        
+        .workflow-step::before {
+            content: "→ ";
+            color: #60a5fa;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💳 Credit Management Dashboard - Funktionsweise</h1>
+        
+        <div class="info-box">
+            <strong>URL:</strong> <span class="url">http://localhost:5000/credit</span>
+        </div>
+
+        <div class="toc">
+            <h3>📑 Inhaltsverzeichnis</h3>
+            <ul>
+                <li><a href="#uebersicht">Übersicht</a></li>
+                <li><a href="#hauptfunktionen">Hauptfunktionen</a></li>
+                <li><a href="#komponenten">Dashboard-Komponenten im Detail</a></li>
+                <li><a href="#api">API-Endpunkte</a></li>
+                <li><a href="#automatisch">Automatische Aktualisierung</a></li>
+                <li><a href="#technisch">Technische Details</a></li>
+                <li><a href="#workflow">Workflow-Beispiel</a></li>
+                <li><a href="#erweiterungen">Erweiterungsmöglichkeiten</a></li>
+                <li><a href="#troubleshooting">Troubleshooting</a></li>
+                <li><a href="#zusammenfassung">Zusammenfassung</a></li>
+            </ul>
+        </div>
+
+        <div class="section" id="uebersicht">
+            <h2>📊 Übersicht</h2>
+            <p>Das <strong>Credit Management Dashboard</strong> ist eine zentrale Komponente des BESS Trading Dashboards zur Überwachung und Verwaltung von Kreditrisiken bei Trading-Gegenparteien (Counterparties). Es ermöglicht die Echtzeitüberwachung von Exposure (Kreditrisiko), die Verwaltung von Credit Limits und die Visualisierung des Exposure-Verlaufs.</p>
+        </div>
+
+        <div class="section" id="hauptfunktionen">
+            <h2>⚙️ Hauptfunktionen</h2>
+            
+            <h3>1. Counterparty Exposure Tracking</h3>
+            <ul>
+                <li><strong>Aktuelles Exposure</strong>: Zeigt das aktuelle Kreditrisiko einer Gegenpartei in EUR</li>
+                <li><strong>Credit Limit</strong>: Zeigt das gesetzte Kreditlimit für die Gegenpartei</li>
+                <li><strong>Auslastung</strong>: Berechnet den Prozentsatz des genutzten Limits (Exposure / Limit × 100%)</li>
+            </ul>
+
+            <h3>2. Credit Limit Management</h3>
+            <ul>
+                <li>Setzen und Ändern von Credit Limits für einzelne Counterparties</li>
+                <li>Validierung und Speicherung der Limits</li>
+            </ul>
+
+            <h3>3. Exposure-Verlauf Visualisierung</h3>
+            <ul>
+                <li>Chart.js-basiertes Liniendiagramm zur Darstellung des Exposure-Verlaufs über die Zeit</li>
+                <li>Automatische Aktualisierung alle 30 Sekunden</li>
+                <li>Historische Daten der letzten 20 Datenpunkte</li>
+            </ul>
+
+            <h3>4. Counterparty-Verwaltung</h3>
+            <ul>
+                <li>Liste aller verfügbaren Counterparties</li>
+                <li>Schnelle Auswahl und Anzeige von Exposure-Daten</li>
+            </ul>
+        </div>
+
+        <div class="section" id="komponenten">
+            <h2>🔧 Dashboard-Komponenten im Detail</h2>
+
+            <h3>1. Counterparty-Auswahl</h3>
+            <p><strong>Position:</strong> Oben links im Dashboard</p>
+            <p><strong>Funktionalität:</strong></p>
+            <ul>
+                <li><strong>Eingabefeld</strong>: Manuelle Eingabe einer Counterparty-ID (z.B. "CP-A", "CP-B")</li>
+                <li><strong>"Laden"-Button</strong>: Lädt die Exposure-Daten für die eingegebene Counterparty</li>
+                <li><strong>"Neu"-Button</strong>: Erstellt eine neue Counterparty (aktuell nur Frontend, Backend-Integration optional)</li>
+            </ul>
+            <pre><code>loadExposure()  // Lädt Exposure-Daten via API
+addNewCounterparty()  // Fügt neue Counterparty hinzu</code></pre>
+
+            <h3>2. Key Metrics (Wichtige Kennzahlen)</h3>
+            <p><strong>Position:</strong> Drei Karten nebeneinander unter der Counterparty-Auswahl</p>
+
+            <h4>A) Aktuelles Exposure</h4>
+            <ul>
+                <li><strong>Anzeige</strong>: Große rote Zahl in EUR</li>
+                <li><strong>Icon</strong>: Rotes Ausrufezeichen (Warnung)</li>
+                <li><strong>Datenquelle</strong>: <code>/api/credit/exposure?counterparty=CP-A</code></li>
+                <li><strong>Feld</strong>: <code>exposure_eur</code> aus der API-Antwort</li>
+            </ul>
+
+            <h4>B) Credit Limit</h4>
+            <ul>
+                <li><strong>Anzeige</strong>: Große gelbe Zahl in EUR</li>
+                <li><strong>Icon</strong>: Gelbes Liniendiagramm</li>
+                <li><strong>Berechnung</strong>: <code>exposure_eur / (utilization_pct / 100)</code></li>
+                <li><strong>Hinweis</strong>: Wird aus Exposure und Auslastung rückgerechnet, wenn Limit nicht direkt verfügbar</li>
+            </ul>
+
+            <h4>C) Auslastung (Utilization)</h4>
+            <ul>
+                <li><strong>Anzeige</strong>: Große Zahl in Prozent</li>
+                <li><strong>Icon</strong>: Grünes Prozentzeichen (färbt sich je nach Wert)</li>
+                <li><strong>Farbcodierung</strong>:
+                    <ul>
+                        <li><span class="badge badge-success">Grün</span> (≤ 75%) - Normal</li>
+                        <li><span class="badge badge-warning">Gelb</span> (75-90%) - Warnung</li>
+                        <li><span class="badge badge-error">Rot</span> (> 90%) - Kritisch</li>
+                    </ul>
+                </li>
+                <li><strong>Datenquelle</strong>: <code>utilization_pct</code> aus der API-Antwort</li>
+            </ul>
+
+            <h3>3. Credit Limit setzen</h3>
+            <p><strong>Position:</strong> Links unten, neben dem Exposure-Chart</p>
+            <p><strong>Funktionalität:</strong></p>
+            <ul>
+                <li><strong>Counterparty-Feld</strong>: Zeigt die aktuell ausgewählte Counterparty (schreibgeschützt)</li>
+                <li><strong>Credit Limit (EUR)</strong>: Eingabefeld für das neue Limit (Schrittweite: 1000 EUR)</li>
+                <li><strong>"Limit speichern"-Button</strong>: Sendet POST-Request an <code>/api/credit/limit</code></li>
+            </ul>
+
+            <div class="info-box">
+                <strong>API-Request:</strong>
+                <pre><code>POST /api/credit/limit
+Content-Type: application/json
+
+{
+  "counterparty": "CP-A",
+  "limit_eur": 100000
+}</code></pre>
+            </div>
+
+            <p><strong>Nach dem Speichern:</strong></p>
+            <ul>
+                <li>Statusmeldung wird angezeigt</li>
+                <li>Exposure-Daten werden automatisch neu geladen (<code>loadExposure()</code>)</li>
+            </ul>
+
+            <h3>4. Exposure-Verlauf Chart</h3>
+            <p><strong>Position:</strong> Rechts unten, neben "Credit Limit setzen"</p>
+            <p><strong>Technologie:</strong> Chart.js (Line Chart)</p>
+
+            <table>
+                <tr>
+                    <th>Eigenschaft</th>
+                    <th>Wert</th>
+                </tr>
+                <tr>
+                    <td>Typ</td>
+                    <td>Liniendiagramm mit Füllung</td>
+                </tr>
+                <tr>
+                    <td>Farbe</td>
+                    <td>Rot (#ef4444) mit 10% Transparenz</td>
+                </tr>
+                <tr>
+                    <td>Datenformat</td>
+                    <td><code>{x: timestamp, y: exposure_eur}</code></td>
+                </tr>
+                <tr>
+                    <td>Höhe</td>
+                    <td>256px (h-64)</td>
+                </tr>
+            </table>
+
+            <h4>X-Achse (Zeit):</h4>
+            <ul>
+                <li>Format: <code>DD.MM. HH:mm</code> (z.B. "15.04. 07:20")</li>
+                <li>Validierung: Nur gültige Daten zwischen 2000-2100 werden angezeigt</li>
+                <li>Max. Ticks: 10</li>
+            </ul>
+
+            <h4>Y-Achse (EUR):</h4>
+            <ul>
+                <li>Formatierung: 
+                    <ul>
+                        <li>Werte ≥ 1000: <code>Xk</code> (z.B. "25k" für 25.000)</li>
+                        <li>Werte < 1000: Ganzzahl</li>
+                    </ul>
+                </li>
+                <li>Titel: "EUR"</li>
+            </ul>
+
+            <h4>Tooltip:</h4>
+            <ul>
+                <li><strong>Titel</strong>: Formatiertes Datum/Zeit (<code>DD.MM. HH:mm</code>)</li>
+                <li><strong>Label</strong>: Währung formatiert (z.B. "25.000,00 €")</li>
+            </ul>
+
+            <h4>Datenverwaltung:</h4>
+            <ul>
+                <li><strong>Historie</strong>: Letzte 20 Datenpunkte werden gespeichert</li>
+                <li><strong>Aktualisierung</strong>: Bei jedem <code>loadExposure()</code>-Aufruf wird ein neuer Datenpunkt hinzugefügt</li>
+                <li><strong>Auto-Refresh</strong>: Alle 30 Sekunden wird <code>loadExposure()</code> aufgerufen</li>
+            </ul>
+
+            <pre><code>initExposureChart()  // Initialisiert Chart.js
+// Bei loadExposure():
+exposureHistory.push({ x: now, y: data.exposure_eur });
+if (exposureHistory.length > 20) exposureHistory.shift();
+exposureChart.data.datasets[0].data = exposureHistory.map(...);
+exposureChart.update('none');</code></pre>
+
+            <h3>5. Alle Counterparties</h3>
+            <p><strong>Position:</strong> Ganz unten im Dashboard</p>
+            <p><strong>Funktionalität:</strong></p>
+            <ul>
+                <li>Zeigt eine Liste aller verfügbaren Counterparties</li>
+                <li><strong>Standard-Counterparties</strong>: CP-A, CP-B, CP-C, CP-D (hardcoded im Frontend)</li>
+                <li><strong>"Anzeigen"-Button</strong>: Lädt die Exposure-Daten für die ausgewählte Counterparty</li>
+            </ul>
+            <pre><code>loadCounterpartyList()  // Rendert die Liste
+selectCounterparty(cp)  // Wählt Counterparty aus und lädt Daten</code></pre>
+        </div>
+
+        <div class="section" id="api">
+            <h2>🔌 API-Endpunkte</h2>
+
+            <h3>1. GET <code>/api/credit/exposure</code></h3>
+            <p><strong>Zweck:</strong> Abrufen der aktuellen Exposure-Daten für eine Counterparty</p>
+            <p><strong>Parameter:</strong></p>
+            <ul>
+                <li><code>counterparty</code> (Query-Parameter): Counterparty-ID (z.B. "CP-A")</li>
+            </ul>
+            <p><strong>Beispiel-Request:</strong></p>
+            <pre><code>GET /api/credit/exposure?counterparty=CP-A</code></pre>
+            <p><strong>Beispiel-Response:</strong></p>
+            <pre><code>{
+  "exposure_eur": 25000,
+  "utilization_pct": 25.0
+}</code></pre>
+            <div class="info-box">
+                <strong>Backend-Routing:</strong><br>
+                Frontend (<code>webapp/app.py</code>) → <code>CREDIT_BASE_URL/credit/exposure</code><br>
+                Standard: <span class="url">http://credit:9503/credit/exposure</span>
+            </div>
+
+            <h3>2. POST <code>/api/credit/limit</code></h3>
+            <p><strong>Zweck:</strong> Setzen eines neuen Credit Limits für eine Counterparty</p>
+            <p><strong>Request Body:</strong></p>
+            <pre><code>{
+  "counterparty": "CP-A",
+  "limit_eur": 100000
+}</code></pre>
+            <p><strong>Beispiel-Request:</strong></p>
+            <pre><code>fetch('/api/credit/limit', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ 
+    counterparty: 'CP-A', 
+    limit_eur: 100000 
+  })
+});</code></pre>
+            <p><strong>Beispiel-Response:</strong></p>
+            <pre><code>{
+  "status": "OK",
+  "message": "Credit limit updated"
+}</code></pre>
+            <div class="info-box">
+                <strong>Backend-Routing:</strong><br>
+                Frontend (<code>webapp/app.py</code>) → <code>CREDIT_BASE_URL/credit/limit</code><br>
+                Standard: <span class="url">http://credit:9503/credit/limit</span>
+            </div>
+            <p><strong>Nach erfolgreichem Setzen:</strong></p>
+            <ul>
+                <li>Statusmeldung wird angezeigt</li>
+                <li><code>loadExposure()</code> wird automatisch aufgerufen, um aktualisierte Daten zu laden</li>
+            </ul>
+        </div>
+
+        <div class="section" id="automatisch">
+            <h2>🔄 Automatische Aktualisierung</h2>
+            <p><strong>Intervall:</strong> Alle 30 Sekunden</p>
+            <p><strong>Funktion:</strong></p>
+            <pre><code>setInterval(() => loadExposure(), 30000);</code></pre>
+            <p><strong>Was passiert bei jeder Aktualisierung:</strong></p>
+            <ol>
+                <li>API-Request an <code>/api/credit/exposure</code></li>
+                <li>Aktualisierung der drei Key Metrics (Exposure, Limit, Auslastung)</li>
+                <li>Neuer Datenpunkt wird zum Exposure-Chart hinzugefügt</li>
+                <li>Chart wird aktualisiert (ohne Animation: <code>update('none')</code>)</li>
+            </ol>
+        </div>
+
+        <div class="section" id="technisch">
+            <h2>⚙️ Technische Details</h2>
+
+            <h3>Frontend-Technologien</h3>
+            <ul>
+                <li><strong>Chart.js</strong>: Für das Exposure-Verlauf-Diagramm</li>
+                <li><strong>Tailwind CSS</strong>: Für das Styling</li>
+                <li><strong>Font Awesome</strong>: Für Icons</li>
+                <li><strong>Vanilla JavaScript</strong>: Keine zusätzlichen Frameworks</li>
+            </ul>
+
+            <h3>Datenformat</h3>
+            <ul>
+                <li><strong>Timestamps</strong>: JavaScript <code>Date.getTime()</code> (Millisekunden seit Epoch)</li>
+                <li><strong>Währungen</strong>: EUR, formatiert mit <code>toLocaleString('de-DE')</code></li>
+                <li><strong>Prozentsätze</strong>: Mit 1 Dezimalstelle (<code>toFixed(1)</code>)</li>
+            </ul>
+
+            <h3>Chart.js Konfiguration</h3>
+            <ul>
+                <li><strong>Responsive</strong>: <code>true</code></li>
+                <li><strong>Aspect Ratio</strong>: <code>maintainAspectRatio: false</code> (feste Höhe)</li>
+                <li><strong>Tooltip</strong>: Custom Callbacks für Datum/Zeit und Währungsformatierung</li>
+                <li><strong>Scales</strong>: Custom Callbacks für X-Achse (Datum) und Y-Achse (k/M Formatierung)</li>
+            </ul>
+        </div>
+
+        <div class="section" id="workflow">
+            <h2>📋 Workflow-Beispiel</h2>
+            <h3>Szenario: Credit Limit für CP-A erhöhen</h3>
+
+            <div class="workflow-step">
+                <strong>1. Counterparty auswählen:</strong><br>
+                Eingabe "CP-A" im Counterparty-Feld<br>
+                Klick auf "Laden" oder Auswahl aus der Liste
+            </div>
+
+            <div class="workflow-step">
+                <strong>2. Aktuelle Situation prüfen:</strong><br>
+                Aktuelles Exposure: 25.000 EUR<br>
+                Credit Limit: 100.000 EUR (rückgerechnet)<br>
+                Auslastung: 25.0% <span class="badge badge-success">(grün)</span>
+            </div>
+
+            <div class="workflow-step">
+                <strong>3. Limit ändern:</strong><br>
+                Im Feld "Credit Limit (EUR)" neuen Wert eingeben (z.B. 150.000)<br>
+                Klick auf "Limit speichern"
+            </div>
+
+            <div class="workflow-step">
+                <strong>4. Bestätigung:</strong><br>
+                Statusmeldung: "Credit Limit für CP-A auf 150.000 EUR gesetzt"<br>
+                Exposure-Daten werden automatisch neu geladen<br>
+                Auslastung wird neu berechnet (25.000 / 150.000 = 16.7%)
+            </div>
+
+            <div class="workflow-step">
+                <strong>5. Monitoring:</strong><br>
+                Chart zeigt kontinuierlich den Exposure-Verlauf<br>
+                Alle 30 Sekunden werden Daten aktualisiert
+            </div>
+        </div>
+
+        <div class="section" id="erweiterungen">
+            <h2>🚀 Erweiterungsmöglichkeiten</h2>
+            <div class="info-box">
+                <strong>Geplante Features (optional):</strong>
+                <ul>
+                    <li><strong>Counterparty-Verwaltung</strong>: Backend-Integration für neue Counterparties</li>
+                    <li><strong>Alarme</strong>: E-Mail/Benachrichtigungen bei hoher Auslastung (>90%)</li>
+                    <li><strong>Historische Daten</strong>: Langzeit-Exposure-Verlauf aus Datenbank</li>
+                    <li><strong>Multi-Market Exposure</strong>: Exposure nach Märkten aufgeteilt</li>
+                    <li><strong>Export-Funktion</strong>: CSV/PDF-Export der Exposure-Daten</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section" id="troubleshooting">
+            <h2>🔧 Troubleshooting</h2>
+
+            <h3>Problem: Keine Daten werden angezeigt</h3>
+            <div class="error-box">
+                <ul>
+                    <li><strong>Prüfen</strong>: Ist der Credit-Service erreichbar? (<span class="url">http://credit:9503</span>)</li>
+                    <li><strong>Prüfen</strong>: Browser-Konsole auf Fehler (F12)</li>
+                    <li><strong>Prüfen</strong>: Network-Tab im Browser (sind API-Requests erfolgreich?)</li>
+                </ul>
+            </div>
+
+            <h3>Problem: Chart zeigt keine Daten</h3>
+            <div class="warning-box">
+                <ul>
+                    <li><strong>Prüfen</strong>: Werden Exposure-Daten erfolgreich geladen?</li>
+                    <li><strong>Prüfen</strong>: Sind Timestamps gültig? (Browser-Konsole: <code>exposureHistory</code>)</li>
+                    <li><strong>Prüfen</strong>: Chart.js ist geladen? (Browser-Konsole: <code>typeof Chart</code>)</li>
+                </ul>
+            </div>
+
+            <h3>Problem: Credit Limit wird nicht gespeichert</h3>
+            <div class="error-box">
+                <ul>
+                    <li><strong>Prüfen</strong>: Backend-Service erreichbar?</li>
+                    <li><strong>Prüfen</strong>: Request-Body korrekt formatiert?</li>
+                    <li><strong>Prüfen</strong>: Browser-Konsole auf Fehler</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section" id="zusammenfassung">
+            <h2>✅ Zusammenfassung</h2>
+            <div class="success-box">
+                <p>Das Credit Management Dashboard bietet eine vollständige Lösung zur Überwachung und Verwaltung von Kreditrisiken:</p>
+                <ul>
+                    <li><span class="badge badge-success">✅</span> <strong>Echtzeit-Monitoring</strong> von Exposure und Auslastung</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Visuelle Darstellung</strong> des Exposure-Verlaufs</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Einfache Verwaltung</strong> von Credit Limits</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Automatische Aktualisierung</strong> alle 30 Sekunden</li>
+                    <li><span class="badge badge-success">✅</span> <strong>Farbcodierte Warnungen</strong> bei hoher Auslastung</li>
+                </ul>
+                <p style="margin-top: 15px;">Die Integration mit dem Backend erfolgt über zwei Haupt-API-Endpunkte, die eine flexible und erweiterbare Architektur ermöglichen.</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #334155; text-align: center; color: #64748b;">
+            <p>Phoenyra BESS Trading Dashboard - Credit Management</p>
+            <p style="font-size: 0.9em;">Dokumentation erstellt: 2025</p>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,11 @@
+users:
+  - username: admin
+    password: admin123
+    role: admin
+  - username: trader
+    password: trader123
+    role: trader
+  - username: viewer
+    password: viewer123
+    role: viewer
+

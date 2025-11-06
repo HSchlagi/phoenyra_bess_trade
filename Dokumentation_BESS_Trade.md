@@ -1,7 +1,7 @@
 # Phoenyra BESS Trade System - Dokumentation
 
-**Version:** 3.0 (ULTRA OMEGA+)  
-**Stand:** 05.11.2025
+**Version:** 3.1 (ULTRA OMEGA+)  
+**Stand:** 06.11.2025
 
 ## Übersicht
 
@@ -28,9 +28,10 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Flask**: Python Web Framework
 - **Tailwind CSS**: Utility-first CSS Framework
 - **Magic UI**: Moderne UI-Komponenten und Effekte
-- **ApexCharts**: Professionelle Chart-Bibliothek
+- **Chart.js**: Professionelle Chart-Bibliothek (Migration von ApexCharts)
 - **Font Awesome**: Icon-Sammlung
 - **Socket.IO**: Real-time Kommunikation
+- **Session-basierte Authentifizierung**: Login-System mit Rollen-Management
 
 ## Features
 
@@ -39,6 +40,10 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Responsive Design** für Desktop und Mobile
 - **Live-Status-Anzeige** der Systemverbindung
 - **Echtzeit-Uhr** in der Navigation
+- **Login-System** mit Benutzer-Authentifizierung (wie Phoenyra EMS)
+- **Rollen-basierte Zugriffskontrolle** (admin, trader, viewer)
+- **Optimierte Navigation** mit kompaktem Design
+- **Favicon** im Browser-Tab
 
 ### 2. BESS-Status-Monitoring
 - **State of Charge (SoC)** Anzeige in Prozent
@@ -58,21 +63,24 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Automatische Preisumrechnung** (ct/kWh → EUR/MWh)
 
 ### 4. Chart-Visualisierung
-- **ApexCharts Integration** für professionelle Charts
+- **Chart.js Integration** für professionelle Charts (Migration von ApexCharts abgeschlossen)
 - **Marktpreise-Zeitreihen-Chart** mit historischen Daten (Mark, EMA, VWAP)
 - **VWAP-Zeitreihen-Chart** mit 15-Minuten-Intervallen
-- **Interaktive Charts** mit Zoom, Pan und Tooltips
+- **Langzeit-Analyse-Chart** mit stündlicher/täglicher Aggregation
+- **Interaktive Charts** mit Tooltips und Hover-Effekten
 - **Automatische Preisvalidierung** (nur Preise 0-1000 EUR/MWh)
-- **Sattes Grün** für optimale Sichtbarkeit
+- **Elegante Linienstärke** (1.5px) für professionelles Aussehen
 - **Responsive Design** für verschiedene Bildschirmgrößen
 - **Persistente Chart-Historie** mit localStorage - Daten bleiben beim Seitenwechsel erhalten
 - **Hybrid-Sync** mit Server-Backup - Automatische Synchronisation zwischen Client und Server (alle 60 Sekunden)
-- **Server-seitige Historie** in SQLite für längere Zeiträume (24 Stunden)
+- **Server-seitige Historie** in SQLite für längere Zeiträume (90 Tage)
+- **Langzeit-Datenbank-Persistierung** - Marktpreise werden automatisch in SQLite gespeichert
 - **Chart-Einstellungen** - Historie-Dauer (0.5-24h), maximale Datenpunkte (60-7200), Auto-Sync, Auto-Play
 - **Export-Funktion** - Chart-Daten als JSON oder CSV exportieren
 - **Chart-Reset-Button** - Historie zurücksetzen mit Bestätigung
 - **Verbesserte Legende** - Vollständige Beschreibungen (Markt Preis, EMA (Exponential Moving Average), VWAP (Volume-Weighted Average Price))
-- **Vertikale Legende-Anordnung** für bessere Lesbarkeit
+- **X-Achsen-Formatierung** - Automatische Datum/Zeit-Formatierung (DD.MM. HH:mm)
+- **Y-Achsen-Formatierung** - Intelligente Formatierung (k/M für große Zahlen)
 
 ### 5. Magic UI Komponenten
 - **Aurora Text** für Überschriften

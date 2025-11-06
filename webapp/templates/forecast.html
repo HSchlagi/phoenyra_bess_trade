@@ -62,7 +62,9 @@
             <h3 class="text-lg font-bold text-white mb-4">
                 <i class="fas fa-euro-sign mr-2 text-green-400"></i>Strompreisprognose (EUR/MWh)
             </h3>
-            <div id="price-chart"></div>
+            <div class="h-64 relative">
+                <canvas id="price-chart"></canvas>
+            </div>
         </div>
 
         <!-- Load Forecast Chart -->
@@ -70,7 +72,9 @@
             <h3 class="text-lg font-bold text-white mb-4">
                 <i class="fas fa-bolt mr-2 text-yellow-400"></i>Lastprognose (MW)
             </h3>
-            <div id="load-chart"></div>
+            <div class="h-64 relative">
+                <canvas id="load-chart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -81,7 +85,9 @@
             <h3 class="text-lg font-bold text-white mb-4">
                 <i class="fas fa-sun mr-2 text-orange-400"></i>Solarprognose (MW)
             </h3>
-            <div id="solar-chart"></div>
+            <div class="h-64 relative">
+                <canvas id="solar-chart"></canvas>
+            </div>
         </div>
 
         <!-- Wind Forecast -->
@@ -89,7 +95,9 @@
             <h3 class="text-lg font-bold text-white mb-4">
                 <i class="fas fa-wind mr-2 text-cyan-400"></i>Windprognose (MW)
             </h3>
-            <div id="wind-chart"></div>
+            <div class="h-64 relative">
+                <canvas id="wind-chart"></canvas>
+            </div>
         </div>
     </div>
 
@@ -98,7 +106,9 @@
         <h3 class="text-lg font-bold text-white mb-4">
             <i class="fas fa-battery-three-quarters mr-2 text-blue-400"></i>Optimaler SOC-Zielverlauf (%)
         </h3>
-        <div id="soc-chart"></div>
+        <div class="h-64 relative">
+            <canvas id="soc-chart"></canvas>
+        </div>
     </div>
 
     <!-- Status Messages -->
@@ -115,62 +125,125 @@
 let priceChart, loadChart, solarChart, windChart, socChart;
 let currentJobId = null;
 
-// Initialize charts
+// Initialize charts with Chart.js
 function initCharts() {
-    const chartOptions = {
-        chart: {
+    const createChart = (canvasId, label, color, yAxisTitle, yMin, yMax) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        
+        const ctx = canvas.getContext('2d');
+        return new Chart(ctx, {
             type: 'line',
-            height: 250,
-            background: 'transparent',
-            foreColor: '#fff',
-            toolbar: { show: false }
-        },
-        theme: { mode: 'dark' },
-        stroke: { curve: 'smooth', width: 3 },
-        grid: { borderColor: '#374151' },
-        xaxis: { type: 'datetime' },
-        tooltip: { theme: 'dark' }
+            data: {
+                datasets: [{
+                    label: label,
+                    data: [],
+                    borderColor: color,
+                    backgroundColor: color.replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: false,
+                    pointRadius: 0,
+                    pointHoverRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: '#ffffff' }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        callbacks: {
+                            title: function(context) {
+                                if (context && context.length > 0 && context[0].parsed && typeof context[0].parsed.x === 'number') {
+                                    const date = new Date(context[0].parsed.x);
+                                    if (!isNaN(date.getTime())) {
+                                        return date.toLocaleDateString('de-DE') + ' ' + 
+                                               String(date.getHours()).padStart(2, '0') + ':' + 
+                                               String(date.getMinutes()).padStart(2, '0');
+                                    }
+                                }
+                                return '';
+                            },
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(2);
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        ticks: {
+                            color: '#ffffff',
+                            font: { size: 11 },
+                            callback: function(value, index, values) {
+                                if (typeof value !== 'number' || !Number.isFinite(value)) {
+                                    return '';
+                                }
+                                try {
+                                    const date = new Date(value);
+                                    if (isNaN(date.getTime()) || date.getTime() === 0) {
+                                        return '';
+                                    }
+                                    const year = date.getFullYear();
+                                    if (year < 2000 || year > 2100) {
+                                        return '';
+                                    }
+                                    return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ' ' +
+                                           String(date.getHours()).padStart(2, '0') + ':' +
+                                           String(date.getMinutes()).padStart(2, '0');
+                                } catch (e) {
+                                    return '';
+                                }
+                            },
+                            maxTicksLimit: 10
+                        },
+                        grid: { color: '#374151' }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: yAxisTitle,
+                            color: '#ffffff',
+                            font: { size: 12 }
+                        },
+                        ticks: {
+                            color: '#ffffff',
+                            font: { size: 11 },
+                            callback: function(value) {
+                                return value.toFixed(2);
+                            }
+                        },
+                        min: yMin,
+                        max: yMax,
+                        grid: { color: '#374151' }
+                    }
+                }
+            }
+        });
     };
 
-    priceChart = new ApexCharts(document.querySelector("#price-chart"), {
-        ...chartOptions,
-        colors: ['#10b981'],
-        series: [{ name: 'Preis', data: [] }],
-        yaxis: { title: { text: 'EUR/MWh' } }
-    });
-    priceChart.render();
-
-    loadChart = new ApexCharts(document.querySelector("#load-chart"), {
-        ...chartOptions,
-        colors: ['#f59e0b'],
-        series: [{ name: 'Last', data: [] }],
-        yaxis: { title: { text: 'MW' } }
-    });
-    loadChart.render();
-
-    solarChart = new ApexCharts(document.querySelector("#solar-chart"), {
-        ...chartOptions,
-        colors: ['#fb923c'],
-        series: [{ name: 'Solar', data: [] }],
-        yaxis: { title: { text: 'MW' } }
-    });
-    solarChart.render();
-
-    windChart = new ApexCharts(document.querySelector("#wind-chart"), {
-        ...chartOptions,
-        colors: ['#06b6d4'],
-        series: [{ name: 'Wind', data: [] }],
-        yaxis: { title: { text: 'MW' } }
-    });
-    windChart.render();
-
-    socChart = new ApexCharts(document.querySelector("#soc-chart"), {
-        ...chartOptions,
-        colors: ['#3b82f6'],
-        series: [{ name: 'SOC Ziel', data: [] }],
-        yaxis: { title: { text: '%' }, min: 0, max: 100 }
-    });
-    socChart.render();
+    priceChart = createChart('price-chart', 'Preis', '#10b981', 'EUR/MWh', undefined, undefined);
+    loadChart = createChart('load-chart', 'Last', '#f59e0b', 'MW', undefined, undefined);
+    solarChart = createChart('solar-chart', 'Solar', '#fb923c', 'MW', undefined, undefined);
+    windChart = createChart('wind-chart', 'Wind', '#06b6d4', 'MW', undefined, undefined);
+    socChart = createChart('soc-chart', 'SOC Ziel', '#3b82f6', '%', 0, 100);
 }
 
 function showStatus(message, type = 'info') {
@@ -252,11 +325,27 @@ function updateCharts(series) {
     const windData = series.map(d => ({ x: new Date(d.ts).getTime(), y: d.gen_wind_mw }));
     const socData = series.map(d => ({ x: new Date(d.ts).getTime(), y: d.soc_target_pct }));
     
-    priceChart.updateSeries([{ name: 'Preis', data: priceData }]);
-    loadChart.updateSeries([{ name: 'Last', data: loadData }]);
-    solarChart.updateSeries([{ name: 'Solar', data: solarData }]);
-    windChart.updateSeries([{ name: 'Wind', data: windData }]);
-    socChart.updateSeries([{ name: 'SOC Ziel', data: socData }]);
+    // Update Chart.js datasets
+    if (priceChart) {
+        priceChart.data.datasets[0].data = priceData;
+        priceChart.update('none');
+    }
+    if (loadChart) {
+        loadChart.data.datasets[0].data = loadData;
+        loadChart.update('none');
+    }
+    if (solarChart) {
+        solarChart.data.datasets[0].data = solarData;
+        solarChart.update('none');
+    }
+    if (windChart) {
+        windChart.data.datasets[0].data = windData;
+        windChart.update('none');
+    }
+    if (socChart) {
+        socChart.data.datasets[0].data = socData;
+        socChart.update('none');
+    }
 }
 
 // Initialize on page load

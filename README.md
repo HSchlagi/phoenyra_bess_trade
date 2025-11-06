@@ -9,8 +9,11 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 ### Core Trading System
 - **🎨 Moderne Web-Oberfläche** mit Flask + Tailwind CSS
 - **🔮 Magic UI Komponenten** (Aurora Text, Neon Cards, Shimmer Buttons)
-- **📊 Professionelle Charts** mit ApexCharts
+- **📊 Professionelle Charts** mit Chart.js (Migration von ApexCharts abgeschlossen)
+- **🔐 Login-System** mit Benutzer-Authentifizierung (wie Phoenyra EMS)
+- **👥 Rollen-basierte Zugriffskontrolle** (admin, trader, viewer)
 - **💾 Persistente Chart-Historie** mit localStorage + Server-Sync
+- **📈 Langzeit-Datenbank-Persistierung** - Marktpreise werden automatisch in SQLite gespeichert (90 Tage)
 - **⚙️ Chart-Einstellungen** (Historie-Dauer, Auto-Sync, Auto-Play)
 - **📥 Export-Funktion** für Chart-Daten (JSON/CSV)
 - **🔄 Chart-Reset** für Historie-Management
@@ -60,8 +63,9 @@ Das Phoenyra BESS Trade System ist eine moderne Web-Anwendung für das Trading u
 - **Flask**: Python Web Framework
 - **Tailwind CSS**: Utility-first CSS Framework
 - **Magic UI**: Moderne UI-Komponenten
-- **ApexCharts**: Professionelle Chart-Bibliothek
+- **Chart.js**: Professionelle Chart-Bibliothek (Migration von ApexCharts)
 - **Socket.IO**: Real-time Kommunikation
+- **Session-basierte Authentifizierung**: Login-System mit Rollen-Management
 
 ## 🚀 Installation
 
@@ -86,7 +90,8 @@ docker compose ps
 ### Zugriff auf Services
 
 #### Web-Dashboards
-- **🌐 Haupt-Dashboard**: http://localhost:5000
+- **🔐 Login**: http://localhost:5000/login (Demo: admin / admin123)
+- **🌐 Haupt-Dashboard**: http://localhost:5000 (nach Login)
 - **🔮 Forecast**: http://localhost:5000/forecast
 - **📈 Risk**: http://localhost:5000/risk
 - **🔌 Grid**: http://localhost:5000/grid
@@ -113,10 +118,13 @@ docker compose ps
 ### Dashboards
 
 #### Haupt-Dashboard
+- **Login-System** - Benutzer-Authentifizierung mit Rollen-Management
 - **BESS-Status-Monitoring** in Echtzeit
 - **Trading-Operations** mit Order-Management
-- **Marktpreise-Visualisierung** mit Zeitreihen-Charts
+- **Marktpreise-Visualisierung** mit Chart.js Zeitreihen-Charts
+- **Langzeit-Analyse-Chart** mit stündlicher/täglicher Aggregation
 - **Persistente Chart-Historie** - Daten bleiben beim Seitenwechsel erhalten
+- **Langzeit-Datenbank-Persistierung** - Marktpreise werden automatisch in SQLite gespeichert (90 Tage)
 - **Chart-Einstellungen** - Historie-Dauer, Auto-Sync, Auto-Play konfigurierbar
 - **Export-Funktion** - Chart-Daten als JSON oder CSV exportieren
 - **Chart-Reset** - Historie zurücksetzen
@@ -242,7 +250,10 @@ phoenyra_BESS_Trade/
 
 ## 🔒 Sicherheit
 
-- **API-Key-basierte** Authentifizierung
+- **Login-System** mit Session-basierter Authentifizierung
+- **Rollen-basierte Zugriffskontrolle** (admin, trader, viewer)
+- **Benutzer-Verwaltung** über `webapp/config/users.yaml`
+- **API-Key-basierte** Authentifizierung für Backend-Services
 - **HMAC-SHA256** Signaturen für WebSocket-Verbindungen
 - **Key-Rotation** für erweiterte Sicherheit
 - **Input-Validierung** für alle Benutzereingaben
@@ -277,7 +288,23 @@ Bei Fragen oder Problemen:
 - Erstelle ein [Issue](https://github.com/HSchlagi/phoenyra_bess_trade/issues)
 - Kontaktiere uns unter: office@instanet.at
 
-## 🆕 Was ist neu? (v3.0 - 05.11.2025)
+## 🆕 Was ist neu? (v3.1 - 06.11.2025)
+
+### Login-System & Sicherheit (06.11.2025)
+- ✅ **Login-System implementiert** - Identisch mit Phoenyra EMS
+- ✅ **Rollen-basierte Zugriffskontrolle** (admin, trader, viewer)
+- ✅ **Session-Management** mit Flask Sessions
+- ✅ **Benutzer-Verwaltung** über YAML-Konfiguration
+- ✅ **Optimierte Navigation** mit kompaktem Design
+- ✅ **Favicon** im Browser-Tab
+
+### Chart-Migration & Langzeit-Datenbank (06.11.2025)
+- ✅ **Chart.js Migration abgeschlossen** - Alle Charts von ApexCharts zu Chart.js migriert
+- ✅ **Langzeit-Datenbank-Persistierung** - Marktpreise werden automatisch in SQLite gespeichert
+- ✅ **Langzeit-Analyse-Chart** mit stündlicher/täglicher Aggregation (bis zu 90 Tage)
+- ✅ **Elegante Linienstärke** (1.5px) für professionelles Aussehen
+- ✅ **Verbesserte X/Y-Achsen-Formatierung** - Automatische Datum/Zeit-Formatierung
+- ✅ **Debug-Endpunkte** für Datenbank-Diagnose
 
 ### Chart-Historie & Persistenz (05.11.2025)
 - ✅ **Persistente Chart-Historie** mit localStorage - Daten bleiben beim Seitenwechsel erhalten
@@ -286,7 +313,7 @@ Bei Fragen oder Problemen:
 - ✅ **Export-Funktion** für Chart-Daten (JSON/CSV Format)
 - ✅ **Chart-Reset-Button** zum Zurücksetzen der Historie
 - ✅ **Verbesserte Legende** mit vollständigen Beschreibungen (Markt Preis, EMA, VWAP)
-- ✅ **Server-seitige Historie** in SQLite für längere Zeiträume (24 Stunden)
+- ✅ **Server-seitige Historie** in SQLite für längere Zeiträume (90 Tage)
 - ✅ **Automatisierter Handel Dokumentation** (Markdown & HTML)
 
 ### Trading-Bridge Integration (04.11.2025)
@@ -315,4 +342,4 @@ Bei Fragen oder Problemen:
 
 ---
 
-**Phoenyra BESS Trade System v3.0 (ULTRA OMEGA+)** - Enterprise Trading & Risk Management für Battery Energy Storage Systems
+**Phoenyra BESS Trade System v3.1 (ULTRA OMEGA+)** - Enterprise Trading & Risk Management für Battery Energy Storage Systems

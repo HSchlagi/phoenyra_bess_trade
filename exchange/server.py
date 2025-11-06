@@ -15,7 +15,7 @@ POLICY_PATH = os.getenv("POLICY_PATH","/app/policy/policy.yaml")
 r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
 
 def db():
-    conn = sqlite3.connect(DB_PATH); conn.row_factory = sqlite3.Row; return conn
+    conn = sqlite3.connect(DB_PATH, timeout=10.0); conn.row_factory = sqlite3.Row; return conn
 
 def init_db():
     con=db(); c=con.cursor()
@@ -321,30 +321,88 @@ def pricefeed_push(market: str, price: float, volume: float = 1.0):
     vwap = (num/den) if den>0 else price
     r.set(f"price:vwap:{market}", vwap)
     
-    # Persist to SQLite for history
+    # Persist to SQLite for history - use single connection and transaction to avoid locks
     try:
         con=db(); c=con.cursor()
+        # Insert new price data
         c.execute("INSERT INTO market_price_history(market, mark, ema, vwap, timestamp, ts) VALUES(?,?,?,?,?,?)",
                   (market, price, ema, vwap, ts_ms, datetime.utcnow().isoformat()))
-        con.commit(); con.close()
-        # Keep only last 24 hours of data (cleanup old entries)
-        cutoff_ts = ts_ms - (24 * 60 * 60 * 1000)
-        con=db(); c=con.cursor()
+        # Keep only last 90 days of data (cleanup old entries for long-term analysis)
+        cutoff_ts = ts_ms - (90 * 24 * 60 * 60 * 1000)
         c.execute("DELETE FROM market_price_history WHERE timestamp < ?", (cutoff_ts,))
+        # Commit both operations in one transaction
         con.commit(); con.close()
+    except sqlite3.OperationalError as e:
+        if "locked" in str(e).lower():
+            # Database is locked - skip this update, will retry on next price feed
+            print(f"WARNING: Database locked, skipping price history update (will retry): {e}")
+        else:
+            import traceback
+            print(f"ERROR persisting price history: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
     except Exception as e:
-        print(f"Error persisting price history: {e}")
+        import traceback
+        print(f"ERROR persisting price history: {e}")
+        print(f"Traceback: {traceback.format_exc()}")
     
     G_MARK.labels(market).set(price); G_EMA.labels(market).set(ema); G_VWAP.labels(market).set(vwap); C_EVENTS.labels(market).inc()
     return {"status":"OK"}
 
 @app.get("/market/prices")
 def get_market_prices(market: str = "epex_at"):
-    """Get current market prices from Redis"""
+    """Get current market prices from Redis and persist to database for long-term analysis"""
     try:
         mark = round(float(r.get(f"price:mark:{market}") or 0.0), 2)
         ema = round(float(r.get(f"price:ema:{market}") or mark), 2)
         vwap = round(float(r.get(f"price:vwap:{market}") or mark), 2)
+        
+        # CRITICAL: Persist to database for long-term analysis
+        # This ensures data is available for /market/history/longterm endpoint
+        # Debug: Log what we're trying to persist
+        print(f"🔍 Persistence check: market={market}, mark={mark:.2f}, ema={ema:.2f}, vwap={vwap:.2f}, condition={mark > 0 and mark < 1000}")
+        if mark > 0 and mark < 1000:  # Only persist valid prices
+            try:
+                ts_ms = int(time.time() * 1000)
+                con = db()
+                c = con.cursor()
+                # Check if data for this timestamp already exists (avoid duplicates)
+                # Round timestamp to nearest second to avoid duplicate inserts
+                ts_second = (ts_ms // 1000) * 1000
+                c.execute("""
+                    SELECT COUNT(*) FROM market_price_history 
+                    WHERE market = ? AND timestamp >= ? AND timestamp < ?
+                """, (market, ts_second, ts_second + 1000))
+                exists = c.fetchone()[0] > 0
+                
+                if not exists:
+                    # Insert new price data only if it doesn't exist
+                    c.execute("""
+                        INSERT INTO market_price_history(market, mark, ema, vwap, timestamp, ts) 
+                        VALUES(?,?,?,?,?,?)
+                    """, (market, mark, ema, vwap, ts_ms, datetime.utcnow().isoformat()))
+                    
+                    # Debug: Log successful insert (every insert for now to debug)
+                    c.execute("SELECT COUNT(*) FROM market_price_history WHERE market = ?", (market,))
+                    total_count = c.fetchone()[0]
+                    print(f"✅ Market price persisted: market={market}, mark={mark:.2f}, ema={ema:.2f}, vwap={vwap:.2f}, timestamp={ts_ms}, total_records={total_count}")
+                else:
+                    print(f"⚠️ Duplicate timestamp skipped: market={market}, timestamp={ts_ms}")
+                
+                # Keep only last 90 days of data (cleanup old entries)
+                cutoff_ts = ts_ms - (90 * 24 * 60 * 60 * 1000)
+                c.execute("DELETE FROM market_price_history WHERE timestamp < ?", (cutoff_ts,))
+                deleted = c.rowcount
+                if deleted > 0:
+                    print(f"Cleaned up {deleted} old market_price_history records (older than 90 days)")
+                con.commit()
+                con.close()
+            except Exception as db_error:
+                # Log but don't fail the request if database write fails
+                import traceback
+                print(f"❌ Warning: Failed to persist market price to database: {db_error}")
+                print(f"❌ Traceback: {traceback.format_exc()}")
+        else:
+            print(f"⚠️ Skipping persistence: mark={mark:.2f} is not in valid range (0 < mark < 1000)")
         
         # If no data, return default values
         if mark == 0.0:
@@ -374,13 +432,14 @@ def get_market_prices(market: str = "epex_at"):
         }
 
 @app.get("/market/history")
-def get_market_history(market: str = "epex_at", hours: int = 1, limit: int = 360):
+def get_market_history(market: str = "epex_at", hours: int = 1, limit: int = 360, aggregated: bool = False):
     """Get market price history from database
     
     Args:
         market: Market identifier
         hours: Number of hours to retrieve (default: 1)
         limit: Maximum number of data points (default: 360)
+        aggregated: If True, aggregate data for longer periods (default: False)
     
     Returns:
         List of price history entries
@@ -389,30 +448,63 @@ def get_market_history(market: str = "epex_at", hours: int = 1, limit: int = 360
         cutoff_ts = int(time.time() * 1000) - (hours * 60 * 60 * 1000)
         con = db()
         c = con.cursor()
-        c.execute("""
-            SELECT timestamp, mark, ema, vwap, ts 
-            FROM market_price_history 
-            WHERE market = ? AND timestamp >= ?
-            ORDER BY timestamp ASC
-            LIMIT ?
-        """, (market, cutoff_ts, limit))
-        rows = c.fetchall()
+        
+        if aggregated and hours > 24:
+            # For longer periods, aggregate by hour
+            c.execute("""
+                SELECT 
+                    (timestamp / 3600000) * 3600000 as hour_timestamp,
+                    AVG(mark) as mark,
+                    AVG(ema) as ema,
+                    AVG(vwap) as vwap,
+                    MIN(mark) as mark_min,
+                    MAX(mark) as mark_max,
+                    COUNT(*) as data_points
+                FROM market_price_history 
+                WHERE market = ? AND timestamp >= ?
+                GROUP BY hour_timestamp
+                ORDER BY hour_timestamp ASC
+                LIMIT ?
+            """, (market, cutoff_ts, limit))
+            rows = c.fetchall()
+            history = []
+            for row in rows:
+                history.append({
+                    "timestamp": int(row["hour_timestamp"]),
+                    "mark": round(row["mark"], 2),
+                    "ema": round(row["ema"], 2),
+                    "vwap": round(row["vwap"], 2),
+                    "mark_min": round(row["mark_min"], 2),
+                    "mark_max": round(row["mark_max"], 2),
+                    "data_points": row["data_points"],
+                    "ts": datetime.fromtimestamp(row["hour_timestamp"] / 1000).isoformat()
+                })
+        else:
+            # Original granular data
+            c.execute("""
+                SELECT timestamp, mark, ema, vwap, ts 
+                FROM market_price_history 
+                WHERE market = ? AND timestamp >= ?
+                ORDER BY timestamp ASC
+                LIMIT ?
+            """, (market, cutoff_ts, limit))
+            rows = c.fetchall()
+            history = []
+            for row in rows:
+                history.append({
+                    "timestamp": row["timestamp"],
+                    "mark": row["mark"],
+                    "ema": row["ema"],
+                    "vwap": row["vwap"],
+                    "ts": row["ts"]
+                })
+        
         con.close()
-        
-        history = []
-        for row in rows:
-            history.append({
-                "timestamp": row["timestamp"],
-                "mark": row["mark"],
-                "ema": row["ema"],
-                "vwap": row["vwap"],
-                "ts": row["ts"]
-            })
-        
         return {
             "market": market,
             "count": len(history),
-            "history": history
+            "history": history,
+            "aggregated": aggregated
         }
     except Exception as e:
         return {
@@ -420,6 +512,227 @@ def get_market_history(market: str = "epex_at", hours: int = 1, limit: int = 360
             "count": 0,
             "history": [],
             "error": str(e)
+        }
+
+@app.get("/market/history/longterm")
+def get_longterm_history(market: str = "epex_at", days: int = 7, aggregation: str = "hour"):
+    """Get aggregated long-term market price history
+    
+    Args:
+        market: Market identifier
+        days: Number of days to retrieve (1, 7, 30, 90)
+        aggregation: Aggregation level - 'hour' or 'day' (default: 'hour')
+    
+    Returns:
+        Aggregated price history with statistics
+    """
+    try:
+        cutoff_ts = int(time.time() * 1000) - (days * 24 * 60 * 60 * 1000)
+        con = db()
+        c = con.cursor()
+        
+        # Check if table exists
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='market_price_history'")
+        if not c.fetchone():
+            return {
+                "market": market,
+                "days": days,
+                "aggregation": aggregation,
+                "count": 0,
+                "history": [],
+                "error": "Table market_price_history does not exist yet. Data will be available after first price feed."
+            }
+        
+        # DEBUG: Check total records in database
+        c.execute("SELECT COUNT(*) as total FROM market_price_history WHERE market = ?", (market,))
+        total_records = c.fetchone()["total"]
+        c.execute("SELECT COUNT(*) as total FROM market_price_history WHERE market = ? AND timestamp >= ?", (market, cutoff_ts))
+        records_in_range = c.fetchone()["total"]
+        c.execute("SELECT MIN(timestamp) as min_ts, MAX(timestamp) as max_ts FROM market_price_history WHERE market = ?", (market,))
+        ts_range = c.fetchone()
+        
+        print(f"DEBUG longterm: market={market}, days={days}, total_records={total_records}, records_in_range={records_in_range}, min_ts={ts_range['min_ts']}, max_ts={ts_range['max_ts']}, cutoff_ts={cutoff_ts}")
+        
+        if aggregation == "day":
+            # Aggregate by day
+            interval_ms = 24 * 60 * 60 * 1000
+            c.execute("""
+                SELECT 
+                    (timestamp / ?) * ? as day_timestamp,
+                    AVG(mark) as mark_avg,
+                    AVG(ema) as ema_avg,
+                    AVG(vwap) as vwap_avg,
+                    MIN(mark) as mark_min,
+                    MAX(mark) as mark_max,
+                    MIN(ema) as ema_min,
+                    MAX(ema) as ema_max,
+                    COUNT(*) as data_points
+                FROM market_price_history 
+                WHERE market = ? AND timestamp >= ?
+                GROUP BY day_timestamp
+                ORDER BY day_timestamp ASC
+            """, (interval_ms, interval_ms, market, cutoff_ts))
+        else:
+            # Aggregate by hour (default)
+            interval_ms = 60 * 60 * 1000
+            c.execute("""
+                SELECT 
+                    (timestamp / ?) * ? as hour_timestamp,
+                    AVG(mark) as mark_avg,
+                    AVG(ema) as ema_avg,
+                    AVG(vwap) as vwap_avg,
+                    MIN(mark) as mark_min,
+                    MAX(mark) as mark_max,
+                    MIN(ema) as ema_min,
+                    MAX(ema) as ema_max,
+                    COUNT(*) as data_points
+                FROM market_price_history 
+                WHERE market = ? AND timestamp >= ?
+                GROUP BY hour_timestamp
+                ORDER BY hour_timestamp ASC
+            """, (interval_ms, interval_ms, market, cutoff_ts))
+        
+        rows = c.fetchall()
+        con.close()
+        
+        history = []
+        for row in rows:
+            # SQLite Row objects - access by column name or index
+            if aggregation == "day":
+                entry = {
+                    "timestamp": int(row["day_timestamp"]),
+                    "mark": round(row["mark_avg"], 2),
+                    "ema": round(row["ema_avg"], 2),
+                    "vwap": round(row["vwap_avg"], 2),
+                    "mark_min": round(row["mark_min"], 2),
+                    "mark_max": round(row["mark_max"], 2),
+                    "ema_min": round(row["ema_min"], 2) if row["ema_min"] is not None else None,
+                    "ema_max": round(row["ema_max"], 2) if row["ema_max"] is not None else None,
+                    "data_points": row["data_points"],
+                    "ts": datetime.fromtimestamp(int(row["day_timestamp"]) / 1000).isoformat()
+                }
+            else:
+                entry = {
+                    "timestamp": int(row["hour_timestamp"]),
+                    "mark": round(row["mark_avg"], 2),
+                    "ema": round(row["ema_avg"], 2),
+                    "vwap": round(row["vwap_avg"], 2),
+                    "mark_min": round(row["mark_min"], 2),
+                    "mark_max": round(row["mark_max"], 2),
+                    "ema_min": round(row["ema_min"], 2) if row["ema_min"] is not None else None,
+                    "ema_max": round(row["ema_max"], 2) if row["ema_max"] is not None else None,
+                    "data_points": row["data_points"],
+                    "ts": datetime.fromtimestamp(int(row["hour_timestamp"]) / 1000).isoformat()
+                }
+            history.append(entry)
+        
+        result = {
+            "market": market,
+            "days": days,
+            "aggregation": aggregation,
+            "count": len(history),
+            "history": history,
+            "debug": {
+                "total_records": total_records,
+                "records_in_range": records_in_range,
+                "min_timestamp": ts_range["min_ts"],
+                "max_timestamp": ts_range["max_ts"],
+                "cutoff_timestamp": cutoff_ts
+            }
+        }
+        print(f"DEBUG longterm result: count={len(history)}, first_entry={history[0] if history else None}")
+        
+        # Enhanced debug info
+        result["debug"] = {
+            "total_records": total_records,
+            "records_in_range": records_in_range,
+            "min_timestamp": ts_range["min_ts"],
+            "max_timestamp": ts_range["max_ts"],
+            "cutoff_timestamp": cutoff_ts,
+            "cutoff_date": datetime.fromtimestamp(cutoff_ts / 1000).isoformat() if cutoff_ts else None,
+            "min_date": datetime.fromtimestamp(ts_range["min_ts"] / 1000).isoformat() if ts_range["min_ts"] else None,
+            "max_date": datetime.fromtimestamp(ts_range["max_ts"] / 1000).isoformat() if ts_range["max_ts"] else None,
+            "current_time": datetime.now().isoformat(),
+            "query_used": "day" if aggregation == "day" else "hour"
+        }
+        
+        return result
+    except Exception as e:
+        import traceback
+        return {
+            "market": market,
+            "days": days,
+            "aggregation": aggregation,
+            "count": 0,
+            "history": [],
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+@app.get("/market/history/debug")
+def debug_market_history(market: str = "epex_at"):
+    """Debug endpoint to check database contents"""
+    try:
+        con = db()
+        c = con.cursor()
+        
+        # Check if table exists
+        c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='market_price_history'")
+        table_exists = c.fetchone() is not None
+        
+        if not table_exists:
+            return {
+                "table_exists": False,
+                "error": "Table market_price_history does not exist"
+            }
+        
+        # Get total count
+        c.execute("SELECT COUNT(*) as total FROM market_price_history WHERE market = ?", (market,))
+        total = c.fetchone()["total"]
+        
+        # Get time range
+        c.execute("SELECT MIN(timestamp) as min_ts, MAX(timestamp) as max_ts FROM market_price_history WHERE market = ?", (market,))
+        ts_range = c.fetchone()
+        
+        # Get last 10 records
+        c.execute("""
+            SELECT timestamp, mark, ema, vwap, ts 
+            FROM market_price_history 
+            WHERE market = ? 
+            ORDER BY timestamp DESC 
+            LIMIT 10
+        """, (market,))
+        recent = [dict(row) for row in c.fetchall()]
+        
+        # Get first 10 records
+        c.execute("""
+            SELECT timestamp, mark, ema, vwap, ts 
+            FROM market_price_history 
+            WHERE market = ? 
+            ORDER BY timestamp ASC 
+            LIMIT 10
+        """, (market,))
+        oldest = [dict(row) for row in c.fetchall()]
+        
+        con.close()
+        
+        return {
+            "table_exists": True,
+            "market": market,
+            "total_records": total,
+            "min_timestamp": ts_range["min_ts"],
+            "max_timestamp": ts_range["max_ts"],
+            "min_date": datetime.fromtimestamp(ts_range["min_ts"] / 1000).isoformat() if ts_range["min_ts"] else None,
+            "max_date": datetime.fromtimestamp(ts_range["max_ts"] / 1000).isoformat() if ts_range["max_ts"] else None,
+            "recent_records": recent,
+            "oldest_records": oldest,
+            "current_time": datetime.now().isoformat()
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "error": str(e),
+            "traceback": traceback.format_exc()
         }
 
 @app.post("/market/history/sync")
